@@ -1,0 +1,164 @@
+NAVO MARINE TECHNOLOGIES
+Typography & Design Language
+navo-typography-system.txt
+Version 1.0
+NAVO Typography System
+Core Philosophy
+NAVO’s typography must feel:
+• Engineered but not cold
+• Intellectual but not academic
+• International
+• Forward-moving
+• Structured
+• Authoritative
+• Distinct from generic SaaS minimalism
+The logo is sharp, angular, directional.
+The typography should contrast this with human depth while preserving structural precision.
+We do NOT use:
+• Ultra-thin geometric minimal fonts
+• Overused startup sans fonts (e.g. Poppins, Montserrat)
+• Nautical cliché typography
+• Overly playful forms
+NAVO is technical, not trendy.
+Primary Typeface (Brand Voice)
+Primary Serif: Canela (Preferred)
+Alternative: Tiempos Headline
+Open-source alternative: Cormorant Garamond (custom-weighted)
+Use Case:
+• Hero headlines
+• Large typography moments
+• Taglines
+• Section titles
+• Editorial storytelling blocks
+Why:
+Anthropic-inspired — warm, intelligent, sculptural.
+Balances the sharp NAVO mark with intellectual authority.
+Feels premium, international, future-forward.
+Weight Usage:
+• Light / Regular for large hero text
+• Medium for section headings
+• Avoid Bold unless absolutely necessary
+Letter Spacing:
+• Slightly tightened for headlines (-1% to -2%)
+• Default for body
+Example Usage:
+H1:
+Technology That Moves Sailing Forward.
+H2:
+Precision for Performance.
+Secondary Typeface (Structural Sans)
+Preferred: Neue Haas Grotesk
+Alternative: Suisse Int’l
+Open-source alternative: Inter (custom tracked)
+Use Case:
+• Navigation
+• UI components
+• Buttons
+• Data labels
+• Technical explanations
+• Small metadata
+Why:
+Provides structural clarity without falling into startup minimalism.
+Supports engineering precision and technical authority.
+Pairs elegantly with expressive serif headline.
+Weight Usage:
+• Regular (primary body text)
+• Medium (subheadings)
+• SemiBold (navigation)
+• Avoid heavy bold usage
+Tracking:
+• Slightly expanded for UI labels (+2%)
+• Normal for paragraphs
+Data & Technical Typography
+Monospace Accent (Optional but Recommended)
+Preferred: IBM Plex Mono
+Alternative: SF Mono
+Open-source: JetBrains Mono
+Use Case:
+• Performance metrics
+• Data readouts
+• Technical specs
+• Telemetry overlays
+• Dashboard mockups
+Why:
+Signals performance, measurement, and precision.
+Reinforces NAVO as a performance technology company.
+Example:
+WIND: 14.2 KTS
+VMG: 6.8 KTS
+HDG: 272°
+Typography Hierarchy System
+H1 (Hero)
+Typeface: Canela Light
+Size: 64–88px desktop
+Line Height: 1.05
+Tone: Sculptural, dominant
+H2 (Section Header)
+Typeface: Canela Regular
+Size: 36–48px
+Line Height: 1.1
+H3 (Subsection)
+Typeface: Neue Haas Grotesk Medium
+Size: 22–28px
+Body Large
+Typeface: Neue Haas Grotesk Regular
+Size: 18–20px
+Line Height: 1.6
+Body Standard
+Typeface: Neue Haas Grotesk Regular
+Size: 16–18px
+Metadata / Label
+Typeface: Neue Haas Grotesk Medium
+Size: 12–14px
+Tracking: +2%
+Typographic Tone Rules
+NAVO typography must:
+• Use whitespace generously
+• Avoid over-centering text
+• Use left alignment for authority
+• Allow headlines to breathe
+• Avoid excessive paragraph density
+• Maintain structured grid alignment
+Contrast Philosophy
+Logo = Angular, engineered, geometric
+Typography = Intellectual, fluid, confident
+The contrast creates memorability.
+We do not match the logo with a hyper-geometric sans.
+We elevate it with editorial sophistication.
+Color & Type Interaction
+Primary Text Color:
+#E6EDF3 (off-white on navy)
+Secondary Text:
+#AAB6C2
+Accent Blue:
+#1E6EFF
+Headlines may use subtle gradient overlays only in hero.
+Avoid:
+• Neon glow typography
+• Overuse of gradient text
+• Over-embellishment
+Signature NAVO Typography Moments
+Oversized Hero Serif
+Minimal subheading beneath
+Data in monospaced overlay
+Generous vertical spacing
+Controlled weight variation
+NAVO should feel:
+Stripe’s clarity
+Anthropic’s intellect
+Saildrone’s authority
+With marine performance precision
+International Considerations
+All selected fonts must support:
+• English
+• Portuguese
+• Spanish
+• Italian
+Ensure proper accent rendering and kerning for Romance languages.
+What NAVO Is Not
+• Not a lifestyle sailing brand
+• Not a startup landing-page clone
+• Not a minimalist Helvetica site
+• Not overly nautical
+NAVO is Marine Performance Infrastructure.
+Typography should reflect that.

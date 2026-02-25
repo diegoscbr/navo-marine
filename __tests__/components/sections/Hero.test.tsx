@@ -19,9 +19,14 @@ describe('Hero', () => {
     )
   })
 
-  it('renders subheadline with partner credentials', () => {
+  it('does not render removed partner credential/subheadline copy', () => {
     render(<Hero />)
-    expect(screen.getByText(/official vakaros atlas ii partner/i)).toBeInTheDocument()
+    expect(
+      screen.queryByText(/official vakaros atlas ii partner · premier partner of ur sailing/i)
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/premier race management & performance data specialists/i)
+    ).not.toBeInTheDocument()
   })
 
   it('renders primary CTA', () => {

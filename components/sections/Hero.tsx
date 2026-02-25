@@ -37,15 +37,6 @@ export function Hero() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_50%,rgba(30,110,255,0.12)_0%,transparent_70%)]" />
 
       <div className="relative z-10 mx-auto max-w-5xl px-6 text-center">
-        <motion.p
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-6 text-xs font-semibold uppercase tracking-[0.3em] text-marine-400"
-        >
-          Official Vakaros Atlas II Partner · Premier Partner of UR SAILING
-        </motion.p>
-
         <motion.h1
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -56,16 +47,6 @@ export function Hero() {
           <br />
           <span className="text-gradient">Sailing Forward.</span>
         </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mx-auto mt-8 max-w-2xl text-lg text-white/60"
-        >
-          Premier Race Management & Performance Data Specialists.
-          Hardware, analytics, and race execution — unified.
-        </motion.p>
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}

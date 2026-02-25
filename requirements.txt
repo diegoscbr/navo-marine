@@ -1,2 +1,0 @@
-# This repository is a Next.js/TypeScript project.
-# No Python dependencies are required.

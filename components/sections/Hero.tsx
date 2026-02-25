@@ -45,7 +45,9 @@ export function Hero() {
         >
           Technology That Moves{' '}
           <br />
-          <span className="text-gradient">Sailing Forward.</span>
+          <span className="text-marine-300">
+            Sailing Forward.
+          </span>
         </motion.h1>
 
         <motion.div

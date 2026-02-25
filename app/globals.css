@@ -8,7 +8,7 @@
   --color-marine-400: #4D8FFF;
   --color-marine-300: #7AADFF;
   --color-cyan-glow: #00D4FF;
-  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Times New Roman', 'Georgia', serif;
 }
 
 @layer base {
@@ -19,6 +19,7 @@
   body {
     background-color: #0B1F2A;
     color: #ffffff;
+    font-family: 'Times New Roman', 'Georgia', serif;
   }
 
   ::selection {

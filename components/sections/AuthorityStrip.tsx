@@ -1,7 +1,29 @@
+import Image from 'next/image'
+
 const trustSignals = [
-  { label: 'Official Brand Partner', name: 'Vakaros Atlas II' },
-  { label: 'Premier Partner', name: 'UR SAILING' },
-  { label: 'Powered by', name: 'Advanced Marine Analytics' },
+  {
+    label: 'OFFICIAL BRAND PARTNER',
+    name: 'Vakaros Atlas II',
+    logoSrc: '/partners/2.png',
+    logoWidth: 528,
+    logoHeight: 100,
+    logoClassName: 'h-40 w-auto -mt-0.1 object-contain',
+    logoWrapperClassName: 'h-10 w-[100px]',
+  },
+  {
+    label: 'PREMIER PARTNER',
+    name: 'UR SAILING',
+    logoSrc: '/partners/Cyclops-Marine-RGB.png',
+    logoWidth: 140,
+    logoHeight: 49,
+    logoClassName: 'h-10 w-auto object-contain',
+    logoWrapperClassName: 'h-10',
+  },
+  {
+    label: 'POWERED BY',
+    name: 'SailViewer',
+    logoWrapperClassName: 'h-10',
+  },
 ]
 
 export function AuthorityStrip() {
@@ -14,7 +36,21 @@ export function AuthorityStrip() {
               <span className="text-xs font-medium uppercase tracking-widest text-white/40">
                 {signal.label}
               </span>
-              <span className="text-sm font-semibold text-white/80">{signal.name}</span>
+              <div
+                className={`flex items-center justify-center ${signal.logoWrapperClassName ?? 'h-10'}`}
+              >
+                {signal.logoSrc ? (
+                  <Image
+                    src={signal.logoSrc}
+                    alt={signal.name}
+                    width={signal.logoWidth}
+                    height={signal.logoHeight}
+                    className={signal.logoClassName}
+                  />
+                ) : (
+                  <span className="text-lg font-semibold text-white/80">{signal.name}</span>
+                )}
+              </div>
             </li>
           ))}
         </ul>

@@ -6,6 +6,21 @@ import { Button } from '@/components/ui/Button'
 export function Hero() {
   return (
     <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-navy-800 to-navy-900">
+
+      {/* Background video */}
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        className="absolute inset-0 h-full w-full object-cover"
+      >
+        <source src="/video/hero-bg.mp4" type="video/mp4" />
+      </video>
+
+      {/* Dark overlay — dims video so headline stays legible */}
+      <div className="absolute inset-0 bg-navy-900/60" />
+
       {/* Subtle data grid overlay */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.04]"

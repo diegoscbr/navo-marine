@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
 
 const navLinks = [
@@ -27,8 +28,14 @@ export function Navbar() {
       }`}
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <a href="#" className="text-xl font-bold tracking-widest text-white">
-          NAVO
+        <a href="#" className="flex items-center">
+          <Image
+            src="/logos/transparent_background_logo.png"
+            alt="NAVO Marine Technologies"
+            width={120}
+            height={32}
+            priority
+          />
         </a>
 
         <ul className="hidden items-center gap-8 md:flex">

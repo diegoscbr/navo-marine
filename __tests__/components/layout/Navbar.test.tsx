@@ -2,9 +2,9 @@ import { render, screen } from '@testing-library/react'
 import { Navbar } from '@/components/layout/Navbar'
 
 describe('Navbar', () => {
-  it('renders NAVO brand name', () => {
+  it('renders NAVO logo', () => {
     render(<Navbar />)
-    expect(screen.getByText('NAVO')).toBeInTheDocument()
+    expect(screen.getByAltText('NAVO Marine Technologies')).toBeInTheDocument()
   })
 
   it('renders navigation links', () => {

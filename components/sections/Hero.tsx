@@ -13,6 +13,7 @@ export function Hero() {
         muted
         loop
         playsInline
+        preload="none"
         aria-hidden="true"
         className="absolute inset-0 h-full w-full object-cover"
       >

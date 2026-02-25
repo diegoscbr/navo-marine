@@ -42,6 +42,7 @@ describe('Hero', () => {
     expect(video?.muted).toBe(true)
     expect(video).toHaveAttribute('loop')
     expect(video).toHaveAttribute('playsinline')
+    expect(video).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('video source points to the hosted file', () => {

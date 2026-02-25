@@ -13,13 +13,14 @@ export function Hero() {
         muted
         loop
         playsInline
+        aria-hidden="true"
         className="absolute inset-0 h-full w-full object-cover"
       >
         <source src="/video/hero-bg.mp4" type="video/mp4" />
       </video>
 
       {/* Dark overlay — dims video so headline stays legible */}
-      <div className="absolute inset-0 bg-navy-900/60" />
+      <div className="pointer-events-none absolute inset-0 bg-navy-900/60" />
 
       {/* Subtle data grid overlay */}
       <div

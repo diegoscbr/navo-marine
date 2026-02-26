@@ -55,14 +55,14 @@ export function DataCapabilities() {
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="overflow-hidden rounded-xl border border-white/10 aspect-video"
+            className="overflow-hidden rounded-xl border border-white/10"
           >
             <video
               autoPlay
               loop
               playsInline
               aria-hidden="true"
-              className="h-full w-full object-cover"
+              className="w-full h-auto block"
             >
               <source src="/video/capabilities-ex.mp4" type="video/mp4" />
             </video>

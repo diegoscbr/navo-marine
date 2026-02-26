@@ -25,7 +25,7 @@ export function ClosingCTA() {
           <Button variant="primary" href="#contact">
             Partner With NAVO
           </Button>
-          <Button variant="outline" href="#contact">
+          <Button variant="ghost" href="#contact">
             Request Consultation
           </Button>
         </div>

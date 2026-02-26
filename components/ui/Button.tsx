@@ -20,10 +20,8 @@ export function Button({ variant, href, children, className = '', ...props }: Bu
   const classes = `${base} ${variantClass[variant]} ${className}`.trim()
 
   if (href) {
-    // Extract only anchor-compatible props to avoid spreading button-only attributes onto <Link>
-    const { type: _type, form: _form, ...anchorProps } = props as ButtonProps & { type?: string; form?: string }
     return (
-      <Link href={href} className={classes} {...anchorProps}>
+      <Link href={href} className={classes}>
         {children}
       </Link>
     )

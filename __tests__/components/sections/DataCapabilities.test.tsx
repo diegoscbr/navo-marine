@@ -1,6 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import { DataCapabilities } from '@/components/sections/DataCapabilities'
 
+beforeAll(() => {
+  jest.spyOn(window.HTMLMediaElement.prototype, 'play').mockImplementation(() => Promise.resolve())
+  jest.spyOn(window.HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined)
+})
+afterAll(() => { jest.restoreAllMocks() })
+
 describe('DataCapabilities', () => {
   it('renders section heading', () => {
     render(<DataCapabilities />)
@@ -21,5 +27,24 @@ describe('DataCapabilities', () => {
   it('renders explore CTA', () => {
     render(<DataCapabilities />)
     expect(screen.getByRole('link', { name: /explore data capabilities/i })).toBeInTheDocument()
+  })
+
+  it('renders capabilities video element', () => {
+    const { container } = render(<DataCapabilities />)
+    const video = container.querySelector('video')
+    expect(video).toBeInTheDocument()
+    expect(video).toHaveAttribute('loop')
+    expect(video).toHaveAttribute('playsinline')
+  })
+
+  it('video source points to capabilities-ex.mp4', () => {
+    const { container } = render(<DataCapabilities />)
+    const source = container.querySelector('video source')
+    expect(source).toHaveAttribute('src', '/video/capabilities-ex.mp4')
+  })
+
+  it('does NOT render the code mockup panel', () => {
+    render(<DataCapabilities />)
+    expect(screen.queryByText(/navo-telemetry-dashboard/i)).not.toBeInTheDocument()
   })
 })

@@ -43,39 +43,28 @@ export function DataCapabilities() {
               ))}
             </ul>
             <div className="mt-10">
-              <Button variant="outline" href="#contact">
+              <Button variant="ghost" href="#contact">
                 Explore Data Capabilities
               </Button>
             </div>
           </div>
 
-          {/* Animated dashboard mockup */}
+          {/* Capabilities video — plays with sound (browser may require prior interaction) */}
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="rounded-xl border border-white/10 bg-navy-900 p-6 font-mono text-xs"
-            aria-hidden="true"
+            className="overflow-hidden rounded-xl border border-white/10 aspect-video"
           >
-            <div className="mb-4 flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-red-500/60" />
-              <span className="h-3 w-3 rounded-full bg-yellow-500/60" />
-              <span className="h-3 w-3 rounded-full bg-green-500/60" />
-              <span className="ml-4 text-white/30">navo-telemetry-dashboard</span>
-            </div>
-            <div className="space-y-2 text-white/70">
-              <p><span className="text-marine-400">fleet</span>.getBoat(<span className="text-cyan-glow">&apos;NAVO-01&apos;</span>)</p>
-              <p className="pl-4 text-white/40">→ lat: 37.8044, lng: -122.4194</p>
-              <p className="pl-4 text-white/40">→ sog: 12.4kn, cog: 247°</p>
-              <p className="pl-4 text-white/40">→ twa: 68°, tws: 18.2kn</p>
-              <p className="mt-4"><span className="text-marine-400">race</span>.getLeaderboard()</p>
-              <div className="pl-4 text-white/40 space-y-1">
-                <p>1. NAVO-01 — 12.4kn — +0:00</p>
-                <p>2. NAVO-07 — 11.9kn — +0:12</p>
-                <p>3. NAVO-03 — 11.8kn — +0:19</p>
-              </div>
-            </div>
+            <video
+              autoPlay
+              loop
+              playsInline
+              className="h-full w-full object-cover"
+            >
+              <source src="/video/capabilities-ex.mp4" type="video/mp4" />
+            </video>
           </motion.div>
         </div>
       </div>

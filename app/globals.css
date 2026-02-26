@@ -44,7 +44,7 @@
     -webkit-backdrop-filter: blur(16px) saturate(180%);
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    transition: background 0.2s ease, border-color 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   }
 
   /* Specular highlight — simulates Apple's top-edge light reflection */
@@ -62,11 +62,18 @@
     );
     pointer-events: none;
     border-radius: inherit;
+    z-index: 0;
   }
 
-  .glass-btn:hover {
+  .glass-btn:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.13);
     border-color: rgba(255, 255, 255, 0.22);
+  }
+
+  .glass-btn:active {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.28);
+    transform: scale(0.98);
   }
 
   .glass-btn:focus-visible {
@@ -74,28 +81,42 @@
     outline-offset: 2px;
   }
 
-  /* Primary variant — marine blue tint */
+  /* Primary variant — marine blue tint.
+   * IMPORTANT: Must be used together with .glass-btn (e.g. class="glass-btn glass-btn-primary").
+   * .glass-btn provides backdrop-filter, overflow:hidden, transition, and the ::before specular highlight. */
   .glass-btn-primary {
     background: rgba(30, 110, 255, 0.18);
     border-color: rgba(30, 110, 255, 0.35);
     color: #ffffff;
   }
 
-  .glass-btn-primary:hover {
+  .glass-btn-primary:hover:not(:disabled) {
     background: rgba(30, 110, 255, 0.28);
     border-color: rgba(30, 110, 255, 0.5);
   }
 
-  /* Ghost variant — pure glass, no tint */
+  .glass-btn-primary:active {
+    background: rgba(30, 110, 255, 0.38);
+    border-color: rgba(30, 110, 255, 0.6);
+  }
+
+  /* Ghost variant — pure glass, no tint.
+   * IMPORTANT: Must be used together with .glass-btn (e.g. class="glass-btn glass-btn-ghost").
+   * .glass-btn provides backdrop-filter, overflow:hidden, transition, and the ::before specular highlight. */
   .glass-btn-ghost {
     background: rgba(255, 255, 255, 0.06);
     border-color: rgba(255, 255, 255, 0.12);
     color: rgba(255, 255, 255, 0.85);
   }
 
-  .glass-btn-ghost:hover {
+  .glass-btn-ghost:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.11);
     border-color: rgba(255, 255, 255, 0.2);
     color: #ffffff;
+  }
+
+  .glass-btn-ghost:active {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.28);
   }
 }

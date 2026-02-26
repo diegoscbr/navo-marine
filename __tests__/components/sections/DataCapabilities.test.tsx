@@ -24,9 +24,11 @@ describe('DataCapabilities', () => {
     expect(screen.getByText(/live.*post-event.*pipeline/i)).toBeInTheDocument()
   })
 
-  it('renders explore CTA', () => {
+  it('renders explore CTA linking to /contact', () => {
     render(<DataCapabilities />)
-    expect(screen.getByRole('link', { name: /explore data capabilities/i })).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: /explore data capabilities/i })
+    expect(link).toBeInTheDocument()
+    expect(link).toHaveAttribute('href', '/contact')
   })
 
   it('renders capabilities video element', () => {

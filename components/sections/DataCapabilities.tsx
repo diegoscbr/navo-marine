@@ -43,7 +43,7 @@ export function DataCapabilities() {
               ))}
             </ul>
             <div className="mt-10">
-              <Button variant="ghost" href="#contact">
+              <Button variant="ghost" href="/contact">
                 Explore Data Capabilities
               </Button>
             </div>

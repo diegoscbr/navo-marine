@@ -9,6 +9,11 @@ export const metadata: Metadata = {
   description:
     'Official Vakaros Atlas II Partner. Race management, performance analytics, and advanced marine data systems for high-performance sailing.',
   keywords: ['sailing', 'race management', 'marine analytics', 'Vakaros Atlas II', 'performance sailing'],
+  icons: {
+    icon: '/logos/navo_icon_transparent.png',
+    shortcut: '/logos/navo_icon_transparent.png',
+    apple: '/logos/navo_icon_transparent.png',
+  },
   openGraph: {
     title: 'NAVO Marine Technologies',
     description: 'Technology That Moves Sailing Forward.',

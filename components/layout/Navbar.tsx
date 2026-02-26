@@ -5,11 +5,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { ReserveCalendlyTrigger } from '@/components/ui/ReserveCalendlyTrigger'
 
 const navLinks = [
   { label: 'Capabilities', href: '/capabilities' },
   { label: 'Contact', href: '/contact' },
-  { label: 'Reserve', href: '/reserve' },
 ]
 
 export function Navbar() {
@@ -54,6 +54,13 @@ export function Navbar() {
               </Link>
             </li>
           ))}
+          <li>
+            <ReserveCalendlyTrigger
+              as="link"
+              label="Reserve"
+              className="text-sm text-white/70 transition-colors hover:text-white"
+            />
+          </li>
         </ul>
 
         <Button variant="ghost" href="/login">

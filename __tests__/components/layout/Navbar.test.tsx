@@ -21,10 +21,10 @@ describe('Navbar', () => {
     expect(link).toHaveAttribute('href', '/contact')
   })
 
-  it('renders Reserve nav link pointing to /reserve', () => {
+  it('renders Reserve nav link pointing to Calendly', () => {
     render(<Navbar />)
     const link = screen.getByRole('link', { name: /reserve/i })
-    expect(link).toHaveAttribute('href', '/reserve')
+    expect(link.getAttribute('href')).toMatch(/^https:\/\/calendly\.com\/d\/cx99-3zw-gtb/)
   })
 
   it('renders Login button pointing to /login', () => {

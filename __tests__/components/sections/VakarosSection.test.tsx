@@ -18,10 +18,9 @@ describe('VakarosSection', () => {
     expect(screen.getByText(/system optimization/i)).toBeInTheDocument()
   })
 
-  it('renders Reserve Units CTA linking to /reserve', () => {
+  it('renders Reserve Units CTA', () => {
     render(<VakarosSection />)
-    const link = screen.getByRole('link', { name: /reserve units/i })
-    expect(link).toHaveAttribute('href', '/reserve')
+    expect(screen.getByRole('button', { name: /reserve units/i })).toBeInTheDocument()
   })
 
   it('does NOT render the old Learn About button', () => {

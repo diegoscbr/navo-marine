@@ -61,6 +61,7 @@ export function DataCapabilities() {
               autoPlay
               loop
               playsInline
+              aria-hidden="true"
               className="h-full w-full object-cover"
             >
               <source src="/video/capabilities-ex.mp4" type="video/mp4" />

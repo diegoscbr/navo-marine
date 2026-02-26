@@ -35,6 +35,7 @@ describe('DataCapabilities', () => {
     expect(video).toBeInTheDocument()
     expect(video).toHaveAttribute('loop')
     expect(video).toHaveAttribute('playsinline')
+    expect(video).toHaveAttribute('autoplay')
   })
 
   it('video source points to capabilities-ex.mp4', () => {

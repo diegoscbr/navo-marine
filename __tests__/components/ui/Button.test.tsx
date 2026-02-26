@@ -26,7 +26,9 @@ describe('Button', () => {
 
   it('renders as a link when href is provided', () => {
     render(<Button variant="primary" href="/capabilities">Go</Button>)
-    expect(screen.getByRole('link', { name: 'Go' })).toHaveAttribute('href', '/capabilities')
+    const link = screen.getByRole('link', { name: 'Go' })
+    expect(link).toHaveAttribute('href', '/capabilities')
+    expect(link).toHaveClass('glass-btn', 'glass-btn-primary')
   })
 
   it('applies glass-btn class regardless of variant', () => {

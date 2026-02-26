@@ -1,4 +1,3 @@
-import { forwardRef } from 'react'
 import Link from 'next/link'
 
 type Variant = 'primary' | 'ghost'
@@ -17,24 +16,22 @@ const variantClass: Record<Variant, string> = {
 const base =
   'glass-btn inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-medium tracking-wide disabled:opacity-50'
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant, href, children, className = '', ...props }, ref) => {
-    const classes = `${base} ${variantClass[variant]} ${className}`
+export function Button({ variant, href, children, className = '', ...props }: ButtonProps) {
+  const classes = `${base} ${variantClass[variant]} ${className}`.trim()
 
-    if (href) {
-      return (
-        <Link href={href} className={classes}>
-          {children}
-        </Link>
-      )
-    }
-
+  if (href) {
+    // Extract only anchor-compatible props to avoid spreading button-only attributes onto <Link>
+    const { type: _type, form: _form, ...anchorProps } = props as ButtonProps & { type?: string; form?: string }
     return (
-      <button ref={ref} className={classes} {...props}>
+      <Link href={href} className={classes} {...anchorProps}>
         {children}
-      </button>
+      </Link>
     )
   }
-)
 
-Button.displayName = 'Button'
+  return (
+    <button className={classes} {...props}>
+      {children}
+    </button>
+  )
+}

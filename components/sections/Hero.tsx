@@ -54,13 +54,10 @@ export function Hero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"
+          className="mt-10 flex items-center justify-center"
         >
-          <Button variant="primary" href="#capabilities">
+          <Button variant="primary" href="/capabilities">
             Explore Our Capabilities
-          </Button>
-          <Button variant="outline" href="#contact">
-            Partner With NAVO
           </Button>
         </motion.div>
       </div>

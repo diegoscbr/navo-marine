@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 
 const navLinks = [
@@ -12,7 +13,10 @@ const navLinks = [
 ]
 
 export function Navbar() {
-  const [scrolled, setScrolled] = useState(false)
+  const pathname = usePathname()
+  const [scrolled, setScrolled] = useState(() =>
+    typeof window !== 'undefined' ? window.scrollY > 20 : false
+  )
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -27,10 +31,11 @@ export function Navbar() {
       }`}
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <Link href="/" className="flex items-center">
+        <Link href="/" className="flex items-center" aria-label="NAVO Marine Technologies — home">
           <Image
             src="/logos/transparent_background_logo.png"
-            alt="NAVO Marine Technologies"
+            alt=""
+            aria-hidden={true}
             width={120}
             height={32}
             priority
@@ -43,6 +48,7 @@ export function Navbar() {
               <Link
                 href={link.href}
                 className="text-sm text-white/70 transition-colors hover:text-white"
+                aria-current={pathname === link.href ? 'page' : undefined}
               >
                 {link.label}
               </Link>

@@ -1,10 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import { Navbar } from '@/components/layout/Navbar'
 
+jest.mock('next/navigation', () => ({ usePathname: () => '/' }))
+
 describe('Navbar', () => {
   it('renders NAVO logo', () => {
     render(<Navbar />)
-    expect(screen.getByAltText('NAVO Marine Technologies')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /NAVO Marine Technologies — home/i })).toBeInTheDocument()
   })
 
   it('renders Capabilities nav link pointing to /capabilities', () => {
@@ -25,9 +27,11 @@ describe('Navbar', () => {
     expect(link).toHaveAttribute('href', '/reserve')
   })
 
-  it('renders Login button', () => {
+  it('renders Login button pointing to /login', () => {
     render(<Navbar />)
-    expect(screen.getByRole('link', { name: /login/i })).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: /login/i })
+    expect(link).toBeInTheDocument()
+    expect(link).toHaveAttribute('href', '/login')
   })
 
   it('does NOT render Partner With NAVO button', () => {

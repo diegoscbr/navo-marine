@@ -1,3 +1,5 @@
+import { Button } from '@/components/ui/Button'
+
 export function ContactSection() {
   return (
     <section id="contact" className="py-24 bg-navy-800/40">
@@ -9,12 +11,9 @@ export function ContactSection() {
           Ready to elevate your race program? Reach out to discuss partnership or consultation.
         </p>
         <div className="mt-10">
-          <a
-            href="mailto:info@navomarine.com?subject=Partnership%20Inquiry"
-            className="inline-flex items-center justify-center rounded-md bg-marine-500 px-8 py-4 text-sm font-medium tracking-wide text-white transition-colors hover:bg-marine-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marine-500"
-          >
+          <Button variant="primary" href="mailto:info@navomarine.com?subject=Partnership%20Inquiry">
             Contact NAVO
-          </a>
+          </Button>
         </div>
       </div>
     </section>

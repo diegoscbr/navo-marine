@@ -1,4 +1,9 @@
+import type { Metadata } from 'next'
 import Image from 'next/image'
+
+export const metadata: Metadata = {
+  title: 'Login | NAVO Marine Technologies',
+}
 
 export default function LoginPage() {
   return (

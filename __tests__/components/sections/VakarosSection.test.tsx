@@ -5,7 +5,7 @@ describe('VakarosSection', () => {
   it('renders heading with official partner claim', () => {
     render(<VakarosSection />)
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(
-      'Official Vakaros Atlas II Partner.'
+      'Official Vakaros Atlas 2 Partner'
     )
   })
 

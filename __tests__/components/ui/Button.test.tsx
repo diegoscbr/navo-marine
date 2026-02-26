@@ -3,15 +3,17 @@ import userEvent from '@testing-library/user-event'
 import { Button } from '@/components/ui/Button'
 
 describe('Button', () => {
-  it('renders primary variant', () => {
-    render(<Button variant="primary">Partner With NAVO</Button>)
-    expect(screen.getByRole('button', { name: 'Partner With NAVO' })).toBeInTheDocument()
+  it('renders primary variant as a button', () => {
+    render(<Button variant="primary">Save</Button>)
+    const btn = screen.getByRole('button', { name: 'Save' })
+    expect(btn).toBeInTheDocument()
+    expect(btn).toHaveClass('glass-btn', 'glass-btn-primary')
   })
 
-  it('renders outline variant', () => {
-    render(<Button variant="outline">Learn More</Button>)
-    const btn = screen.getByRole('button', { name: 'Learn More' })
-    expect(btn).toHaveClass('border')
+  it('renders ghost variant as a button', () => {
+    render(<Button variant="ghost">Login</Button>)
+    const btn = screen.getByRole('button', { name: 'Login' })
+    expect(btn).toHaveClass('glass-btn', 'glass-btn-ghost')
   })
 
   it('calls onClick handler', async () => {
@@ -22,8 +24,15 @@ describe('Button', () => {
     expect(onClick).toHaveBeenCalledTimes(1)
   })
 
-  it('renders as anchor when href is provided', () => {
-    render(<Button variant="primary" href="#contact">CTA</Button>)
-    expect(screen.getByRole('link', { name: 'CTA' })).toHaveAttribute('href', '#contact')
+  it('renders as a link when href is provided', () => {
+    render(<Button variant="primary" href="/capabilities">Go</Button>)
+    expect(screen.getByRole('link', { name: 'Go' })).toHaveAttribute('href', '/capabilities')
+  })
+
+  it('applies glass-btn class regardless of variant', () => {
+    const { rerender } = render(<Button variant="primary">A</Button>)
+    expect(screen.getByRole('button')).toHaveClass('glass-btn')
+    rerender(<Button variant="ghost">A</Button>)
+    expect(screen.getByRole('button')).toHaveClass('glass-btn')
   })
 })

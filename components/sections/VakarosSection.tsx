@@ -59,8 +59,8 @@ export function VakarosSection() {
               ))}
             </ul>
             <div className="mt-10">
-              <Button variant="primary" href="#contact">
-                Learn About Atlas II Integration
+              <Button variant="primary" href="/reserve">
+                Reserve Units
               </Button>
             </div>
           </div>

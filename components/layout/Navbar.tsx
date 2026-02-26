@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 
 const navLinks = [
-  { label: 'Capabilities', href: '#capabilities' },
-  { label: 'Race Management', href: '#race-management' },
-  { label: 'Data Systems', href: '#data' },
-  { label: 'Vakaros Atlas II', href: '#vakaros' },
-  { label: 'Contact', href: '#contact' },
+  { label: 'Capabilities', href: '/capabilities' },
+  { label: 'Contact', href: '/contact' },
+  { label: 'Reserve', href: '/reserve' },
 ]
 
 export function Navbar() {
@@ -28,7 +27,7 @@ export function Navbar() {
       }`}
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <a href="#" className="flex items-center">
+        <Link href="/" className="flex items-center">
           <Image
             src="/logos/transparent_background_logo.png"
             alt="NAVO Marine Technologies"
@@ -36,23 +35,23 @@ export function Navbar() {
             height={32}
             priority
           />
-        </a>
+        </Link>
 
         <ul className="hidden items-center gap-8 md:flex">
           {navLinks.map((link) => (
             <li key={link.href}>
-              <a
+              <Link
                 href={link.href}
                 className="text-sm text-white/70 transition-colors hover:text-white"
               >
                 {link.label}
-              </a>
+              </Link>
             </li>
           ))}
         </ul>
 
-        <Button variant="primary" href="#contact">
-          Partner With NAVO
+        <Button variant="ghost" href="/login">
+          Login
         </Button>
       </nav>
     </header>

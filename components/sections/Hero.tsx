@@ -43,10 +43,10 @@ export function Hero() {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="text-5xl font-semibold leading-tight tracking-tight text-white sm:text-6xl lg:text-7xl"
         >
-          Technology That Moves{' '}
+          Technology That{' '}
           <br />
           <span className="text-marine-300">
-            Sailing Forward.
+            Moves Sailing Forward.
           </span>
         </motion.h1>
 

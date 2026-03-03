@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { getProductBySlug } from '@/lib/commerce/products'
 import { ProductPurchasePanel } from './ProductPurchasePanel'
 import { ProductImageGallery } from './ProductImageGallery'
+import { ProductInfoCards } from './ProductInfoCards'
+import { ProductTechSpecs } from './ProductTechSpecs'
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>
@@ -57,19 +58,32 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   return (
     <>
       <Navbar />
-      <main className="pb-20">
-        <section className="bg-black pb-16 pt-28">
-          <div className="mx-auto max-w-7xl px-6">
+      <main className="bg-navy-900 pb-20">
+        {/* Product hero */}
+        <section className="relative overflow-hidden pt-28 pb-16">
+          {/* Radial glow — matches the Hero section */}
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(30,110,255,0.1)_0%,transparent_70%)]" />
+          {/* Subtle grid overlay */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.03]"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(30,110,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(30,110,255,1) 1px, transparent 1px)',
+              backgroundSize: '60px 60px',
+            }}
+          />
+
+          <div className="relative z-10 mx-auto max-w-7xl px-6">
             <div className="text-center">
               <p className="text-xs uppercase tracking-[0.24em] text-cyan-glow">Atlas 2</p>
               <h1 className="mt-4 text-5xl font-semibold leading-tight text-white sm:text-6xl">
                 {product.name}
               </h1>
-              <p className="mx-auto mt-4 max-w-2xl text-base text-white/70 sm:text-lg">
+              <p className="mx-auto mt-4 max-w-2xl text-base text-white/60 sm:text-lg">
                 {product.descriptionShort}
               </p>
-              <p className="mt-4 text-sm text-white/55">
-                Starting at {formatUSD(product.pricing.amountCents)} {product.pricing.taxIncluded && '• Tax included'}
+              <p className="mt-4 text-sm text-white/40">
+                Starting at {formatUSD(product.pricing.amountCents)} {product.pricing.taxIncluded && '· Tax included'}
               </p>
             </div>
 
@@ -82,66 +96,11 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           </div>
         </section>
 
-        <section className="bg-white py-16 text-[#1d1d1f]">
-          <div className="mx-auto grid max-w-7xl gap-6 px-6 lg:grid-cols-4">
-            <article className="rounded-3xl border border-black/10 bg-[#fafafc] p-5">
-              <p className="text-xs uppercase tracking-[0.17em] text-black/45">In the Box</p>
-              <p className="mt-3 text-sm text-black/75">{product.inTheBox.join(', ')}</p>
-            </article>
-            <article className="rounded-3xl border border-black/10 bg-[#fafafc] p-5">
-              <p className="text-xs uppercase tracking-[0.17em] text-black/45">Warranty</p>
-              <p className="mt-3 text-sm text-black/75">
-                Optional Vakaros Care at {formatUSD(warranty?.priceCents ?? 0)}.
-              </p>
-            </article>
-            <article className="rounded-3xl border border-black/10 bg-[#fafafc] p-5">
-              <p className="text-xs uppercase tracking-[0.17em] text-black/45">Rental</p>
-              <p className="mt-3 text-sm text-black/75">
-                Event rentals start at {formatUSD(product.rentalPolicy?.rentalPriceCents ?? 0)} with
-                sail number capture.
-              </p>
-            </article>
-            <article className="rounded-3xl border border-black/10 bg-[#fafafc] p-5">
-              <p className="text-xs uppercase tracking-[0.17em] text-black/45">Support</p>
-              <p className="mt-3 text-sm text-black/75">
-                User manual and setup resources are available at{' '}
-                <Link
-                  href={product.support.manualUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-marine-500 underline-offset-4 hover:underline"
-                >
-                  support.vakaros.com
-                </Link>
-                .
-              </p>
-            </article>
-          </div>
-        </section>
+        {/* Info cards */}
+        <ProductInfoCards product={product} warranty={warranty ?? null} />
 
-        <section className="bg-[#f5f5f7] py-20 text-[#1d1d1f]">
-          <div className="mx-auto max-w-7xl px-6">
-            <h2 className="text-3xl font-semibold sm:text-4xl">Tech Specs</h2>
-            <div className="mt-8 space-y-5">
-              {product.techSpecs.map((specGroup) => (
-                <article key={specGroup.group} className="overflow-hidden rounded-3xl border border-black/10 bg-white">
-                  <h3 className="border-b border-black/10 px-5 py-4 text-lg font-semibold">{specGroup.group}</h3>
-                  <div>
-                    {specGroup.rows.map((row) => (
-                      <div
-                        key={`${specGroup.group}-${row.label}`}
-                        className="grid gap-2 border-b border-black/10 px-5 py-3 text-sm last:border-b-0 sm:grid-cols-[200px_1fr] sm:items-start"
-                      >
-                        <p className="text-black/55">{row.label}</p>
-                        <p className="text-black/80">{row.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
+        {/* Tech specs */}
+        <ProductTechSpecs specGroups={product.techSpecs} />
       </main>
       <Footer />
     </>

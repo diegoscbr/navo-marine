@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import Image from 'next/image'
+import { motion } from 'framer-motion'
 
 type ProductImage = {
   src: string
@@ -62,22 +63,32 @@ export function ProductImageGallery({ images }: ProductImageGalleryProps) {
   }
 
   return (
-    <div className="overflow-hidden rounded-[2.2rem] border border-white/20 bg-white/[0.06] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.35)] backdrop-blur-2xl sm:p-6">
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="overflow-hidden rounded-xl border border-white/10 bg-navy-800/60 p-4 shadow-[0_24px_60px_rgba(0,0,0,0.3)] backdrop-blur-xl sm:p-5"
+    >
       <div
-        className="relative overflow-hidden rounded-[1.7rem] border border-white/20 bg-[#0e0f12] touch-pan-y"
+        className="relative overflow-hidden rounded-lg border border-white/10 bg-navy-900 touch-pan-y"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-[5] w-20 bg-gradient-to-r from-black/40 to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-[5] w-20 bg-gradient-to-l from-black/40 to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-[5] w-16 bg-gradient-to-r from-navy-900/60 to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-[5] w-16 bg-gradient-to-l from-navy-900/60 to-transparent" />
+
+        {/* Previous button */}
         <button
           type="button"
           onClick={previous}
-          className="absolute top-1/2 left-3 z-10 h-11 w-11 -translate-y-1/2 rounded-full border border-white/45 bg-black/20 text-2xl leading-none text-white/95 opacity-85 backdrop-blur-xl transition-all duration-200 hover:bg-black/45 hover:opacity-100 sm:h-12 sm:w-12"
+          className="absolute top-1/2 left-3 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-navy-800/60 backdrop-blur-xl transition-all duration-200 hover:border-white/40 hover:bg-navy-800 sm:h-11 sm:w-11"
           aria-label="Previous image"
         >
-          {'<'}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/80">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
         </button>
+
         <Image
           src={activeImage.src}
           alt={activeImage.alt}
@@ -86,43 +97,59 @@ export function ProductImageGallery({ images }: ProductImageGalleryProps) {
           className="mx-auto h-auto w-full max-w-3xl object-contain"
           priority={activeIndex === 0}
         />
+
+        {/* Next button */}
         <button
           type="button"
           onClick={next}
-          className="absolute top-1/2 right-3 z-10 h-11 w-11 -translate-y-1/2 rounded-full border border-white/45 bg-black/20 text-2xl leading-none text-white/95 opacity-85 backdrop-blur-xl transition-all duration-200 hover:bg-black/45 hover:opacity-100 sm:h-12 sm:w-12"
+          className="absolute top-1/2 right-3 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-navy-800/60 backdrop-blur-xl transition-all duration-200 hover:border-white/40 hover:bg-navy-800 sm:h-11 sm:w-11"
           aria-label="Next image"
         >
-          {'>'}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/80">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
         </button>
       </div>
 
-      <div className="mt-4 text-center">
-        <p className="text-sm text-white/70">
-          {activeIndex + 1} / {images.length}
-        </p>
+      {/* Dot indicators */}
+      <div className="mt-4 flex items-center justify-center gap-2">
+        {images.map((_, index) => (
+          <button
+            key={index}
+            type="button"
+            onClick={() => setActiveIndex(index)}
+            className={`h-1.5 rounded-full transition-all duration-200 ${
+              index === activeIndex
+                ? 'w-6 bg-marine-400'
+                : 'w-1.5 bg-white/25 hover:bg-white/40'
+            }`}
+            aria-label={`Show image ${index + 1}`}
+          />
+        ))}
       </div>
 
-      <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-7">
+      {/* Thumbnails */}
+      <div className="mt-4 grid grid-cols-6 gap-2">
         {images.map((image, index) => (
           <button
             key={image.src}
             type="button"
             onClick={() => setActiveIndex(index)}
-            className={`overflow-hidden rounded-xl border ${
-              index === activeIndex ? 'border-marine-400' : 'border-white/20'
-            } bg-white/[0.05] transition-colors hover:border-white/50`}
+            className={`overflow-hidden rounded-lg border transition-colors ${
+              index === activeIndex ? 'border-marine-400' : 'border-white/10 hover:border-white/30'
+            } bg-navy-900`}
             aria-label={`Show image ${index + 1}`}
           >
             <Image
               src={image.src}
               alt={image.alt}
-              width={2000}
-              height={2000}
+              width={200}
+              height={200}
               className="h-auto w-full object-cover"
             />
           </button>
         ))}
       </div>
-    </div>
+    </motion.div>
   )
 }

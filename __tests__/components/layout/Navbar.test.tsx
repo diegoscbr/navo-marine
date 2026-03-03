@@ -16,6 +16,12 @@ describe('Navbar', () => {
     expect(link).toHaveAttribute('href', '/capabilities')
   })
 
+  it('renders Products nav link pointing to /products', () => {
+    render(<Navbar />)
+    const link = screen.getByRole('link', { name: /products/i })
+    expect(link).toHaveAttribute('href', '/products')
+  })
+
   it('renders Contact nav link pointing to /contact', () => {
     render(<Navbar />)
     const link = screen.getByRole('link', { name: /^contact$/i })

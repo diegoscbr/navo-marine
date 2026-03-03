@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { ReserveCalendlyTrigger } from '@/components/ui/ReserveCalendlyTrigger'
 
 const navLinks = [
+  { label: 'Products', href: '/products' },
   { label: 'Capabilities', href: '/capabilities' },
   { label: 'Contact', href: '/contact' },
 ]

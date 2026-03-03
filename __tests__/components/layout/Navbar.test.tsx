@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { useSession, signOut } from 'next-auth/react'
 import { Navbar } from '@/components/layout/Navbar'
 
 jest.mock('next/navigation', () => ({ usePathname: () => '/' }))
@@ -42,5 +43,52 @@ describe('Navbar', () => {
   it('does NOT render Race Management link', () => {
     render(<Navbar />)
     expect(screen.queryByRole('link', { name: /race management/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('Navbar — unauthenticated', () => {
+  beforeEach(() => {
+    ;(useSession as jest.Mock).mockReturnValue({ data: null, status: 'unauthenticated' })
+  })
+
+  it('renders Login link when no session', () => {
+    render(<Navbar />)
+    expect(screen.getByRole('link', { name: /login/i })).toBeInTheDocument()
+  })
+
+  it('does not render Sign Out button when no session', () => {
+    render(<Navbar />)
+    expect(screen.queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('Navbar — authenticated', () => {
+  const mockSession = {
+    data: {
+      user: { name: 'Ada Lovelace', email: 'ada@example.com', image: null },
+      expires: '9999-01-01',
+    },
+    status: 'authenticated',
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(useSession as jest.Mock).mockReturnValue(mockSession)
+  })
+
+  it('renders Sign Out button when session exists', () => {
+    render(<Navbar />)
+    expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument()
+  })
+
+  it('does not render Login link when authenticated', () => {
+    render(<Navbar />)
+    expect(screen.queryByRole('link', { name: /login/i })).not.toBeInTheDocument()
+  })
+
+  it('calls signOut with callbackUrl "/" when Sign Out clicked', () => {
+    render(<Navbar />)
+    fireEvent.click(screen.getByRole('button', { name: /sign out/i }))
+    expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/' })
   })
 })

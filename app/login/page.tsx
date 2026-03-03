@@ -24,7 +24,7 @@ export default async function LoginPage() {
         height={38}
         className="mb-12"
       />
-      <h1 className="text-3xl font-semibold text-white">Sign In</h1>
+      <h1 className="font-heading text-3xl font-semibold text-white">Sign In</h1>
       <p className="mt-4 mb-8 text-white/40">
         Sign in to access your NAVO dashboard.
       </p>

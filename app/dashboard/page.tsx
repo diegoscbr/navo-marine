@@ -27,7 +27,7 @@ export default async function DashboardPage() {
             className="mx-auto mb-6 rounded-full"
           />
         )}
-        <h1 className="text-2xl font-semibold text-white">
+        <h1 className="font-heading text-2xl font-semibold text-white">
           Welcome back, {session.user.name?.split(' ')[0] ?? 'Captain'}
         </h1>
         <p className="mt-2 text-sm text-white/40">{session.user.email}</p>

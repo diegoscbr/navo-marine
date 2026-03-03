@@ -15,7 +15,7 @@ export function ClosingCTA() {
         transition={{ duration: 0.7 }}
         className="relative z-10 mx-auto max-w-4xl px-6 text-center"
       >
-        <h2 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
+        <h2 className="font-heading text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
           The Future of Marine Performance{' '}
           <br />
           <span className="text-gradient">Starts Here.</span>

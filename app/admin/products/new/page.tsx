@@ -13,7 +13,7 @@ export default function NewProductPage() {
         <Link href="/admin/products" className="text-xs text-white/40 hover:text-white/70">
           ← Products
         </Link>
-        <h1 className="mt-3 text-2xl font-semibold text-white">New product</h1>
+        <h1 className="font-heading mt-3 text-2xl font-semibold text-white">New product</h1>
       </div>
       <ProductForm />
     </div>

@@ -45,7 +45,7 @@ export function RaceManagement() {
               transition={{ duration: 0.4, delay: i * 0.08 }}
               className="rounded-lg border border-white/10 bg-navy-900/80 p-6"
             >
-              <h3 className="mb-2 font-semibold text-white">{cap.title}</h3>
+              <h3 className="font-heading mb-2 font-semibold text-white">{cap.title}</h3>
               <p className="text-sm leading-relaxed text-white/50">{cap.description}</p>
             </motion.div>
           ))}

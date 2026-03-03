@@ -14,7 +14,7 @@ export function ReserveForm() {
         className="mb-12"
       />
 
-      <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+      <h1 className="font-heading text-4xl font-semibold tracking-tight text-white sm:text-5xl">
         Reserve Vakaros Atlas II Units
       </h1>
 

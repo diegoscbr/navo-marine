@@ -20,7 +20,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         <Link href="/admin/products" className="text-xs text-white/40 hover:text-white/70">
           ← Products
         </Link>
-        <h1 className="mt-3 text-2xl font-semibold text-white">Edit product</h1>
+        <h1 className="font-heading mt-3 text-2xl font-semibold text-white">Edit product</h1>
         <p className="mt-1 text-sm text-white/40">{product.name}</p>
       </div>
       <ProductForm initialData={product} />

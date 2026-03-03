@@ -40,7 +40,7 @@ export function CoreCapabilities() {
               transition={{ duration: 0.5, delay: i * 0.1 }}
               className="rounded-xl border border-white/10 bg-navy-800/60 p-8"
             >
-              <h3 className="mb-4 text-lg font-semibold text-white">{cap.title}</h3>
+              <h3 className="font-heading mb-4 text-lg font-semibold text-white">{cap.title}</h3>
               <p className="mb-6 text-sm leading-relaxed text-white/60">{cap.description}</p>
               <ul className="space-y-2">
                 {cap.items.map((item) => (

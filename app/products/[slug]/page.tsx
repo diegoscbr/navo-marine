@@ -76,7 +76,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           <div className="relative z-10 mx-auto max-w-7xl px-6">
             <div className="text-center">
               <p className="text-xs uppercase tracking-[0.24em] text-cyan-glow">Atlas 2</p>
-              <h1 className="mt-4 text-5xl font-semibold leading-tight text-white sm:text-6xl">
+              <h1 className="font-heading mt-4 text-5xl font-semibold leading-tight text-white sm:text-6xl">
                 {product.name}
               </h1>
               <p className="mx-auto mt-4 max-w-2xl text-base text-white/60 sm:text-lg">

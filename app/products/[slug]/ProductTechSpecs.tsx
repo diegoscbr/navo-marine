@@ -20,7 +20,7 @@ export function ProductTechSpecs({ specGroups }: ProductTechSpecsProps) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="text-3xl font-semibold text-white sm:text-4xl"
+          className="font-heading text-3xl font-semibold text-white sm:text-4xl"
         >
           Tech Specs
         </motion.h2>
@@ -35,7 +35,7 @@ export function ProductTechSpecs({ specGroups }: ProductTechSpecsProps) {
               transition={{ duration: 0.4, delay: i * 0.08 }}
               className="overflow-hidden rounded-xl border border-white/10 bg-navy-800/60"
             >
-              <h3 className="border-b border-white/10 px-5 py-4 text-lg font-semibold text-white">
+              <h3 className="font-heading border-b border-white/10 px-5 py-4 text-lg font-semibold text-white">
                 {specGroup.group}
               </h3>
               <div>

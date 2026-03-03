@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useSession, signOut } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
 import { ReserveCalendlyTrigger } from '@/components/ui/ReserveCalendlyTrigger'
 
@@ -14,6 +15,7 @@ const navLinks = [
 
 export function Navbar() {
   const pathname = usePathname()
+  const { data: session } = useSession()
   const [scrolled, setScrolled] = useState(() =>
     typeof window !== 'undefined' ? window.scrollY > 20 : false
   )
@@ -63,9 +65,29 @@ export function Navbar() {
           </li>
         </ul>
 
-        <Button variant="ghost" href="/login">
-          Login
-        </Button>
+        {session?.user ? (
+          <div className="flex items-center gap-3">
+            {session.user.image && (
+              <Image
+                src={session.user.image}
+                alt={session.user.name ?? ''}
+                width={32}
+                height={32}
+                className="rounded-full"
+              />
+            )}
+            <button
+              onClick={() => signOut({ callbackUrl: '/' })}
+              className="glass-btn glass-btn-ghost inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-medium tracking-wide"
+            >
+              Sign Out
+            </button>
+          </div>
+        ) : (
+          <Button variant="ghost" href="/login">
+            Login
+          </Button>
+        )}
       </nav>
     </header>
   )

@@ -10,6 +10,7 @@ const config: Config = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     'framer-motion': '<rootDir>/__mocks__/framer-motion.tsx',
+    '^next-auth/react$': '<rootDir>/__mocks__/next-auth/react.tsx',
   },
   collectCoverageFrom: [
     'components/**/*.{ts,tsx}',

@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { ReserveCalendlyTrigger } from '@/components/ui/ReserveCalendlyTrigger'
+import { UnderwaterCaustics } from '@/components/backgrounds/UnderwaterCaustics'
 
 const services = [
   'Certified Integration',
@@ -15,8 +16,9 @@ const services = [
 
 export function VakarosSection() {
   return (
-    <section id="vakaros" className="py-24 bg-navy-900">
-      <div className="mx-auto max-w-7xl px-6">
+    <section id="vakaros" className="relative overflow-hidden py-24 bg-navy-900">
+      <UnderwaterCaustics className="absolute inset-0 z-0" />
+      <div className="relative z-10 mx-auto max-w-7xl px-6">
         <div className="grid gap-16 lg:grid-cols-2 lg:items-center">
           {/* Visual block */}
           <motion.div

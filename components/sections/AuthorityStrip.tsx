@@ -48,7 +48,7 @@ export function AuthorityStrip() {
                     className={signal.logoClassName}
                   />
                 ) : (
-                  <span className="text-lg font-semibold text-white/80">{signal.name}</span>
+                  <span className="font-heading text-lg font-semibold text-white/80">{signal.name}</span>
                 )}
               </div>
             </li>

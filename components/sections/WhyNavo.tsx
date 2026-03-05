@@ -46,7 +46,7 @@ export function WhyNavo() {
                 {String(i + 1).padStart(2, '0')}
               </span>
               <div>
-                <h3 className="font-semibold text-white">{item.title}</h3>
+                <h3 className="font-heading font-semibold text-white">{item.title}</h3>
                 <p className="mt-1 text-sm leading-relaxed text-white/50">{item.description}</p>
               </div>
             </motion.div>

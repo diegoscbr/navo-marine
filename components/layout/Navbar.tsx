@@ -50,7 +50,7 @@ export function Navbar() {
             <li key={link.href}>
               <Link
                 href={link.href}
-                className="text-sm text-white/70 transition-colors hover:text-white"
+                className="inline-flex items-center py-3 px-1 text-sm text-white/70 transition-colors hover:text-white"
                 aria-current={pathname === link.href ? 'page' : undefined}
               >
                 {link.label}
@@ -61,7 +61,7 @@ export function Navbar() {
             <ReserveCalendlyTrigger
               as="link"
               label="Reserve"
-              className="text-sm text-white/70 transition-colors hover:text-white"
+              className="inline-flex items-center py-3 px-1 text-sm text-white/70 transition-colors hover:text-white"
             />
           </li>
         </ul>

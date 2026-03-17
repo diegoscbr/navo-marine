@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run dev          # Dev server at http://localhost:3000
-npm run build        # prisma generate + next build
+npm run build        # next build
 npm run start        # Production server
 npm run lint         # ESLint
 npm test             # Jest unit tests (80% coverage threshold enforced)
@@ -14,17 +14,13 @@ npx jest --testPathPattern=ComponentName  # Single test file
 npm run test:e2e     # Playwright E2E tests
 ```
 
-**Database:**
-```bash
-DATABASE_URL="file:./dev.db" npx prisma migrate deploy   # Apply migrations
-npx prisma studio                                         # DB GUI
-```
-
-> `prisma.config.ts` loads `DATABASE_URL` from `.env.local` via dotenv, but CLI commands may need the env var set explicitly.
+**Database (Supabase):**
+- Migrations live in `supabase/migrations/` — apply via Supabase MCP `apply_migration`
+- Supabase dashboard: https://supabase.com/dashboard/project/fdjuhjadjqkpqnpxgmue
 
 ## Architecture
 
-**Stack:** Next.js 16 (App Router), TypeScript, Tailwind CSS v4, Framer Motion, NextAuth v5-beta, Prisma + SQLite (better-sqlite3), Jest + React Testing Library, Playwright
+**Stack:** Next.js 16 (App Router), TypeScript, Tailwind CSS v4, Framer Motion, NextAuth v5-beta, Supabase (Postgres), Jest + React Testing Library, Playwright
 
 ### Route Structure
 
@@ -42,25 +38,31 @@ npx prisma studio                                         # DB GUI
 Two-file split is intentional — required by NextAuth v5 for edge middleware compatibility:
 
 - `lib/auth.config.ts` — Edge-safe: Google provider, JWT session strategy, sign-in page. No DB imports.
-- `lib/auth.ts` — Node.js only: extends `auth.config.ts` with Prisma adapter, adds session callback to attach `user.id`.
+- `lib/auth.ts` — Node.js only: extends `auth.config.ts`, adds session callback to attach `user.id`. JWT-only (no DB adapter).
 - `middleware.ts` — Uses `auth.config.ts` (not `auth.ts`) to protect `/dashboard` and `/admin` routes. Admin check: email must end in `@navomarine.com`.
 - `lib/auth-guard.ts` — `requireAuth()` helper for server-side route protection.
 
+**CRITICAL: Every API route must call `requireAuth()` or `requireAdmin()` before any Supabase query. There is no RLS fallback — the service role key bypasses all DB policies and is the only gate. A missing auth check = the entire database is exposed.**
+
 ### Data Layer
 
-- `lib/db/products.ts` — Repository for the `Product` model (listProducts, getProduct, createProduct, updateProduct, deleteProduct). All write operations accept `ProductInput` which includes nested `options` and `addOns`.
+- `lib/db/client.ts` — Supabase client singletons: `supabaseAdmin` (service role, server-only) and `supabase` (anon key, public reads).
+- `lib/db/products.ts` — Repository for admin product CRUD (listProducts, getProduct, createProduct, updateProduct, deleteProduct). Uses `supabaseAdmin`. All write operations accept `ProductInput` with nested `options` and `addOns`.
 - `lib/commerce/products.ts` — Hardcoded storefront products (currently Atlas 2). Used by `/products` pages. Separate from the DB-backed admin products.
-- `lib/prisma.ts` — Singleton PrismaClient with `@prisma/adapter-better-sqlite3`. Generated client lives at `lib/generated/prisma/` (excluded from git, rebuilt on `npm run build`).
 
 ### Admin Product Management
 
-Full CRUD at `/admin/products/*`. The `ProductForm` component handles a complex nested shape: a product has `options[]` (each with `values[]`) and `addOns[]`. These are serialized to JSON for Prisma's SQLite storage (`inTheBox` field is a JSON string).
+Full CRUD at `/admin/products/*`. The `ProductForm` component handles a complex nested shape: a product has `options[]` (each with `values[]`) and `addOns[]`. `inTheBox` is stored as JSONB and returned as a JSON string.
+
+### Admin Fleet
+
+`/admin/fleet` — Read-only unit list. Queries `units` table via `supabaseAdmin`.
 
 ### Storefront vs Admin Products
 
 These are **two separate systems**:
 - **Storefront** (`/products`): Hardcoded in `lib/commerce/products.ts`, type `StorefrontProduct`. Rich detail with specs, sections, images.
-- **Admin** (`/admin/products`): DB-backed via Prisma. Intended for future dynamic storefront.
+- **Admin** (`/admin/products`): DB-backed via Supabase. Intended for future dynamic storefront.
 
 ### Styling
 

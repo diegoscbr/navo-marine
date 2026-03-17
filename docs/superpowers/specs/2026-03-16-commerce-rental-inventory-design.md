@@ -575,7 +575,17 @@ Each phase ends with a **user E2E testing gate** — owner personally tests befo
 
 - Install Supabase MCP, create Supabase project
 - Enable `pg_cron` extension in Supabase project settings
-- Write and run all migrations (full schema above, including all indexes from TODOS.md)
+- Write and run all migrations (full schema above)
+- **Create `lib/db/client.ts`** — two named exports: `supabaseAdmin` (service role key, for all writes) and `supabase` (anon key, for public reads). Global singleton pattern matching `lib/prisma.ts`. All API routes and `lib/db/*.ts` repository files import from here. Service role key is only referenced in this one file.
+- **Add all required indexes in the Phase 1 migration** (not deferred):
+  ```sql
+  CREATE INDEX ON reservations(event_id, product_id, status);
+  CREATE INDEX ON reservations(date_window_id, product_id, status);
+  CREATE INDEX ON reservations(user_id);
+  CREATE INDEX ON reservations(expires_at, status);
+  CREATE INDEX ON notifications(user_id, read);
+  CREATE INDEX ON unit_events(unit_id, created_at);
+  ```
 - Seed: Atlas 2 product, 40 units (01–40), sample rental event
 - Migrate existing SQLite admin product data to Supabase (export from Prisma, import to Supabase)
 - Remove Prisma/SQLite, swap in Supabase JS client
@@ -633,7 +643,7 @@ Each phase ends with a **user E2E testing gate** — owner personally tests befo
 
 1. **Never trust client pricing** — all totals recalculated server-side before Stripe session creation
 2. **Snapshot order items** — titles/prices frozen at purchase time; product edits don't affect past orders
-3. **Webhook idempotency is mandatory** — `stripe_events.stripe_event_id` unique constraint prevents duplicate fulfillment. All three webhook writes (stripe_events + order + reservation update) must be wrapped in a Supabase DB transaction (RPC) — partial writes are not acceptable
+3. **Webhook write order is mandatory** — writes must happen in this exact order: (1) UPDATE reservation → reserved_paid, (2) CREATE order + order_items, (3) INSERT stripe_events. `stripe_events` is the commit flag — insert it LAST. Add a pre-check: if `reservation.status == 'reserved_paid'` at the start of webhook processing, return 200 immediately (secondary idempotency guard for the case where stripe_events insert failed on a previous attempt). Never insert stripe_events first.
 4. **Unit assignment is always manual** — admin picks which physical unit fulfils each paid reservation; never auto-assign
 5. **No Supabase RLS** — access control enforced in Next.js API routes via NextAuth session. Service role key is server-only, never exposed to client. **CRITICAL: every new API route must call `requireAuth()` or `requireAdmin()` before any Supabase query — there is no DB-level fallback**
 6. **Audit log is append-only** — never update or delete `unit_events` rows

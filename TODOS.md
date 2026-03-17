@@ -30,17 +30,8 @@
 **How to apply:** Write `docs/runbooks/gmail-key-rotation.md` alongside Phase 6 Gmail API setup.
 **Effort:** S | **Blocked by:** Phase 6 (Gmail API setup)
 
-### [P2] Add missing DB indexes to migrations
-**What:** The following composite indexes are needed for production query performance but not specified in the schema:
-- `reservations(event_id, product_id, status)` — availability count query
-- `reservations(date_window_id, product_id, status)` — availability count query
-- `reservations(user_id)` — customer dashboard listing
-- `reservations(expires_at, status)` — pg_cron expiry query
-- `notifications(user_id, read)` — bell icon unread count
-- `unit_events(unit_id, created_at)` — audit log per unit
-**Why:** The availability count query runs on every checkout. Without a composite index, it full-scans the reservations table.
-**How to apply:** Add all indexes to the Phase 1 migration SQL.
-**Effort:** S | **Blocked by:** Phase 1 (schema migration)
+~~### [P2] Add missing DB indexes to migrations~~
+~~Moved to Phase 1 spec as a required deliverable (not a TODO). See Section 12, Phase 1.~~
 
 ### [P2] `date_window_allocations` inventory_status parity
 **What:** `rental_event_products` has `inventory_status` (in_stock / inventory_on_the_way / out_of_stock) for admin messaging. `date_window_allocations` does not. If admin wants to show "Inventory On the Way" for a custom date rental window, there's no mechanism.

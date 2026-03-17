@@ -42,7 +42,6 @@ export async function GET() {
         }
       : null,
     support: p.manualUrl ? { manualUrl: p.manualUrl } : null,
-    updatedAt: p.updatedAt,
   }));
 
   return NextResponse.json({ products: feed });

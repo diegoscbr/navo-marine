@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
-import { storefrontProducts } from '@/lib/commerce/products'
+import { listStorefrontProducts } from '@/lib/db/storefront'
 
 function formatUSD(cents: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100)
@@ -13,7 +13,8 @@ export const metadata: Metadata = {
   description: 'Explore NAVO Marine Technologies product offerings.',
 }
 
-export default function ProductsPage() {
+export default async function ProductsPage() {
+  const products = await listStorefrontProducts()
   return (
     <>
       <Navbar />
@@ -24,7 +25,7 @@ export default function ProductsPage() {
         </p>
 
         <div className="mt-10 grid gap-5">
-          {storefrontProducts.map((product) => (
+          {products.map((product) => (
             <article
               key={product.id}
               className="max-w-2xl rounded-xl border border-white/10 bg-navy-800/60 p-8"

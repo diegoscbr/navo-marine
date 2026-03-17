@@ -73,7 +73,7 @@ function toStorefrontProduct(row: DBProductRow): StorefrontProduct {
     descriptionShort: row.description_short ?? '',
     pricing: {
       amountCents: row.base_price_cents,
-      currency: row.currency,
+      currency: row.currency as 'usd',
       taxIncluded: row.tax_included,
     },
     inTheBox: [...row.product_box_items]

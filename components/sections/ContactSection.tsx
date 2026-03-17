@@ -29,19 +29,19 @@ export function ContactSection() {
           </div>
 
           {/* Right: CTA */}
-          <div className="rounded-2xl border border-white/10 bg-navy-800/50 px-8 py-12 backdrop-blur-xl">
+          <div className="rounded-2xl border border-white/10 bg-navy-800/50 p-10 backdrop-blur-xl">
             <h3 className="font-heading text-xl font-semibold text-white">
               Send us a message
             </h3>
-            <p className="mt-3 text-sm text-white/60">
+            <p className="mt-4 text-sm text-white/60">
               Tell us about your program and what you&apos;re looking to accomplish. We&apos;ll follow up with next steps.
             </p>
-            <div className="mt-8">
+            <div className="mt-10">
               <Button variant="primary" href="mailto:info@navomarine.com?subject=Partnership%20Inquiry">
                 Email NAVO
               </Button>
             </div>
-            <p className="mt-6 text-xs text-white/30">
+            <p className="mt-8 text-xs text-white/30">
               info@navomarine.com
             </p>
           </div>

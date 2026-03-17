@@ -1,77 +1,95 @@
-import type { Metadata } from "next";
-import { supabaseAdmin } from "@/lib/db/client";
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { supabaseAdmin } from '@/lib/db/client'
+import { AddUnitForm } from './AddUnitForm'
 
-export const metadata: Metadata = {
-  title: "Fleet | NAVO Admin",
-};
+export const metadata: Metadata = { title: 'Fleet | NAVO Admin' }
 
 const STATUS_STYLES: Record<string, string> = {
-  available:       "bg-emerald-500/15 text-emerald-400",
-  reserved_unpaid: "bg-yellow-500/15 text-yellow-400",
-  reserved_paid:   "bg-blue-500/15 text-blue-400",
-  in_transit:      "bg-purple-500/15 text-purple-400",
-  at_event:        "bg-cyan-500/15 text-cyan-400",
-  returned:        "bg-white/10 text-white/50",
-  damaged:         "bg-red-500/15 text-red-400",
-  lost:            "bg-red-500/20 text-red-500",
-  sold:            "bg-white/5 text-white/30",
-};
+  available:       'bg-emerald-500/15 text-emerald-400',
+  reserved_unpaid: 'bg-yellow-500/15 text-yellow-400',
+  reserved_paid:   'bg-blue-500/15 text-blue-400',
+  in_transit:      'bg-purple-500/15 text-purple-400',
+  at_event:        'bg-cyan-500/15 text-cyan-400',
+  returned:        'bg-white/10 text-white/50',
+  damaged:         'bg-red-500/15 text-red-400',
+  lost:            'bg-red-500/20 text-red-500',
+  sold:            'bg-white/5 text-white/30',
+}
 
 type UnitRow = {
-  id: string;
-  navo_number: string;
-  serial_number: string | null;
-  status: string;
-  notes: string | null;
-  added_at: string;
-  products: { name: string; slug: string } | null;
-};
+  id: string
+  navo_number: string
+  serial_number: string | null
+  status: string
+  notes: string | null
+  added_at: string
+  products: { id: string; name: string; slug: string } | null
+}
+
+type ProductRow = { id: string; name: string }
 
 export default async function AdminFleetPage() {
-  const { data, error } = await supabaseAdmin
-    .from("units")
-    .select("id, navo_number, serial_number, status, notes, added_at, products(name, slug)")
-    .order("navo_number");
+  const [unitsResult, productsResult] = await Promise.all([
+    supabaseAdmin
+      .from('units')
+      .select('id, navo_number, serial_number, status, notes, added_at, products(id, name, slug)')
+      .is('retired_at', null)
+      .order('navo_number'),
+    supabaseAdmin
+      .from('products')
+      .select('id, name')
+      .eq('active', true)
+      .order('name'),
+  ])
 
-  if (error) {
+  if (unitsResult.error) {
     return (
       <div className="mx-auto max-w-5xl">
-        <p className="text-sm text-red-400">Failed to load fleet: {error.message}</p>
+        <p className="text-sm text-red-400">Failed to load fleet: {unitsResult.error.message}</p>
       </div>
-    );
+    )
   }
 
-  const units = data as unknown as UnitRow[];
+  const units = (unitsResult.data ?? []) as unknown as UnitRow[]
+  const products = (productsResult.data ?? []) as unknown as ProductRow[]
 
   const statusCounts = units.reduce<Record<string, number>>((acc, u) => {
-    acc[u.status] = (acc[u.status] ?? 0) + 1;
-    return acc;
-  }, {});
+    acc[u.status] = (acc[u.status] ?? 0) + 1
+    return acc
+  }, {})
 
   return (
     <div className="mx-auto max-w-5xl">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="font-heading text-2xl font-semibold text-white">Fleet</h1>
-        <p className="mt-1 text-sm text-white/40">{units.length} unit{units.length !== 1 ? "s" : ""} total</p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-heading text-2xl font-semibold text-white">Fleet</h1>
+          <p className="mt-1 text-sm text-white/40">
+            {units.length} active unit{units.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <AddUnitForm products={products} />
       </div>
 
       {/* Status summary */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        {Object.entries(statusCounts).map(([status, count]) => (
-          <span
-            key={status}
-            className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_STYLES[status] ?? "bg-white/10 text-white/50"}`}
-          >
-            {status.replace(/_/g, " ")} · {count}
-          </span>
-        ))}
-      </div>
+      {Object.keys(statusCounts).length > 0 && (
+        <div className="mb-6 flex flex-wrap gap-2">
+          {Object.entries(statusCounts).map(([status, count]) => (
+            <span
+              key={status}
+              className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_STYLES[status] ?? 'bg-white/10 text-white/50'}`}
+            >
+              {status.replace(/_/g, ' ')} · {count}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Table */}
       {units.length === 0 ? (
         <div className="rounded-xl border border-white/10 bg-white/5 py-16 text-center">
-          <p className="text-sm text-white/40">No units in fleet yet.</p>
+          <p className="text-sm text-white/40">No active units in fleet.</p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-white/10">
@@ -87,16 +105,27 @@ export default async function AdminFleetPage() {
             </thead>
             <tbody className="divide-y divide-white/5">
               {units.map((u) => (
-                <tr key={u.id} className="bg-white/[0.02] hover:bg-white/5">
-                  <td className="px-5 py-3 font-mono text-white">{u.navo_number}</td>
-                  <td className="px-5 py-3 text-white/60">{u.products?.name ?? "—"}</td>
+                <tr key={u.id} className="bg-white/[0.02] transition-colors hover:bg-white/5">
                   <td className="px-5 py-3">
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[u.status] ?? "bg-white/10 text-white/50"}`}>
-                      {u.status.replace(/_/g, " ")}
+                    <Link
+                      href={`/admin/fleet/${u.id}`}
+                      className="font-mono text-white hover:text-marine-400"
+                    >
+                      {u.navo_number}
+                    </Link>
+                  </td>
+                  <td className="px-5 py-3 text-white/60">{u.products?.name ?? '—'}</td>
+                  <td className="px-5 py-3">
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[u.status] ?? 'bg-white/10 text-white/50'}`}
+                    >
+                      {u.status.replace(/_/g, ' ')}
                     </span>
                   </td>
-                  <td className="px-5 py-3 font-mono text-xs text-white/40">{u.serial_number ?? "—"}</td>
-                  <td className="px-5 py-3 text-xs text-white/40">{u.notes ?? "—"}</td>
+                  <td className="px-5 py-3 font-mono text-xs text-white/40">
+                    {u.serial_number ?? '—'}
+                  </td>
+                  <td className="px-5 py-3 text-xs text-white/40">{u.notes ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -104,5 +133,5 @@ export default async function AdminFleetPage() {
         </div>
       )}
     </div>
-  );
+  )
 }

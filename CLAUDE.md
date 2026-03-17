@@ -4,64 +4,102 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-<!-- AUTO-GENERATED from package.json scripts -->
 ```bash
 npm run dev          # Dev server at http://localhost:3000
-npm run build        # Production build
-npm run start        # Start production server
+npm run build        # prisma generate + next build
+npm run start        # Production server
 npm run lint         # ESLint
-npx jest             # Jest unit tests (no test script yet — add one to package.json)
-npx jest --testPathPattern=ComponentName     # Run a single test file
-npx playwright test                          # Playwright E2E tests
-npx playwright test e2e/inquiry-flow.spec.ts # Run a single E2E test
+npm test             # Jest unit tests (80% coverage threshold enforced)
+npx jest --testPathPattern=ComponentName  # Single test file
+npm run test:e2e     # Playwright E2E tests
 ```
 
-> `jest.config.ts` and `playwright.config.ts` have not been created yet. See `docs/plans/2026-02-24-landing-page.md` Phase 1, Task 2 for setup steps.
-<!-- /AUTO-GENERATED -->
+**Database:**
+```bash
+DATABASE_URL="file:./dev.db" npx prisma migrate deploy   # Apply migrations
+npx prisma studio                                         # DB GUI
+```
+
+> `prisma.config.ts` loads `DATABASE_URL` from `.env.local` via dotenv, but CLI commands may need the env var set explicitly.
 
 ## Architecture
 
-**Stack:** Next.js 16 (App Router), TypeScript, Tailwind CSS v4, Framer Motion, Jest + React Testing Library, Playwright
+**Stack:** Next.js 16 (App Router), TypeScript, Tailwind CSS v4, Framer Motion, NextAuth v5-beta, Prisma + SQLite (better-sqlite3), Jest + React Testing Library, Playwright
 
-**Entry points:**
-- `app/page.tsx` — assembles all section components in order
-- `app/layout.tsx` — root layout with fonts, metadata, global wrapper
-- `app/api/inquiry/route.ts` — POST handler for contact form submissions
-- `app/globals.css` — Tailwind directives and base styles
+### Route Structure
 
-**Component structure:**
-- `components/sections/` — one file per landing page section (Hero, AuthorityStrip, CoreCapabilities, DataCapabilities, VakarosSection, RaceManagement, WhyNavo, ClosingCTA)
-- `components/layout/` — Navbar, Footer
-- `components/ui/` — shared primitives (Button, SectionHeader, InquiryForm)
-- `lib/analytics.ts` — GA4 event helpers
+| Route | Purpose |
+|---|---|
+| `/` | Public landing page (Hero, sections) |
+| `/products`, `/products/[slug]` | Storefront — data from `lib/commerce/products.ts` (hardcoded) |
+| `/capabilities`, `/contact`, `/reserve` | Public marketing pages |
+| `/login` | Google OAuth sign-in |
+| `/dashboard` | Protected — requires auth |
+| `/admin/*` | Protected — requires `@navomarine.com` email |
 
-**Testing layout:**
-- `__tests__/components/` — unit tests for React components
-- `__tests__/api/` — unit tests for API routes
-- `e2e/` — Playwright E2E tests (critical user flow: inquiry form submission)
+### Auth System
 
-## Brand & Design Context
+Two-file split is intentional — required by NextAuth v5 for edge middleware compatibility:
 
-**Color tokens** (define in `app/globals.css` using Tailwind v4 CSS variables — no `tailwind.config.ts` with v4):
-- Deep Navy: `#0B1F2A`
-- Midnight Blue: `#0F2C3F`
-- Electric Marine Blue: `#1E6EFF`
-- Accent: cyan glow highlights
+- `lib/auth.config.ts` — Edge-safe: Google provider, JWT session strategy, sign-in page. No DB imports.
+- `lib/auth.ts` — Node.js only: extends `auth.config.ts` with Prisma adapter, adds session callback to attach `user.id`.
+- `middleware.ts` — Uses `auth.config.ts` (not `auth.ts`) to protect `/dashboard` and `/admin` routes. Admin check: email must end in `@navomarine.com`.
+- `lib/auth-guard.ts` — `requireAuth()` helper for server-side route protection.
 
-**Design principles:** Dark mode dominant, large negative space, grid precision, subtle Framer Motion animations. Visual reference: Saildrone authority + Stripe.dev technical clarity. Avoid nautical clichés and recreational/lifestyle tone.
+### Data Layer
 
-**Logo assets:** `public/logos/` (sourced from `brandGuides/NAVO_LOGO/`)
-- `transparent_background_logo.png` — for dark backgrounds
-- `black_background_logo.png` — for light backgrounds
+- `lib/db/products.ts` — Repository for the `Product` model (listProducts, getProduct, createProduct, updateProduct, deleteProduct). All write operations accept `ProductInput` which includes nested `options` and `addOns`.
+- `lib/commerce/products.ts` — Hardcoded storefront products (currently Atlas 2). Used by `/products` pages. Separate from the DB-backed admin products.
+- `lib/prisma.ts` — Singleton PrismaClient with `@prisma/adapter-better-sqlite3`. Generated client lives at `lib/generated/prisma/` (excluded from git, rebuilt on `npm run build`).
 
-**Typography:** Inter or Neue Haas Grotesk (clean, modern sans-serif)
+### Admin Product Management
 
-## Key Reference Docs
+Full CRUD at `/admin/products/*`. The `ProductForm` component handles a complex nested shape: a product has `options[]` (each with `values[]`) and `addOns[]`. These are serialized to JSON for Prisma's SQLite storage (`inTheBox` field is a JSON string).
 
-- `brandGuides/landing-page-prd.md` — full PRD: section specs, conversion goals, tone of voice, competitive benchmarks
-- `docs/plans/2026-02-24-landing-page.md` — phased implementation plan with exact commands, file stubs, and TDD steps
-- `brandGuides/AGENTS.md` — repo-level contributor notes
+### Storefront vs Admin Products
 
-## Conversion Goals
+These are **two separate systems**:
+- **Storefront** (`/products`): Hardcoded in `lib/commerce/products.ts`, type `StorefrontProduct`. Rich detail with specs, sections, images.
+- **Admin** (`/admin/products`): DB-backed via Prisma. Intended for future dynamic storefront.
 
-Primary: partnership inquiry form submission. Secondary: capability PDF download, event service contact. Target: >3% form conversion, <50% bounce rate, >1:45 avg time on page.
+### Styling
+
+Tailwind v4 — no `tailwind.config.ts`. All theme tokens in `app/globals.css` as CSS variables:
+- `--color-navy-900: #0B1F2A`, `--color-navy-800: #0F2C3F`, `--color-marine-500: #1E6EFF`, `--color-cyan-glow: #00D4FF`
+- `--font-heading: Sansation` (headlines), `--font-sans: Raleway` (body)
+- `glass-btn`, `glass-btn-primary`, `glass-btn-ghost` — frosted glass button classes
+
+### Testing
+
+- `__tests__/components/` — component unit tests
+- `__tests__/api/` — API route unit tests
+- `__mocks__/framer-motion.tsx` — stubs all animation components
+- `__mocks__/next-auth/react.tsx` — stubs `useSession`, `signOut`
+- `e2e/` — Playwright E2E tests
+- Coverage threshold: 80% lines (enforced by Jest)
+
+## Brand & Design
+
+**Tone:** Technical authority, not nautical lifestyle. Visual reference: Saildrone + Stripe.dev. No maritime clichés.
+
+**Logo:** `public/logos/transparent_background_logo.png` (dark bg), `public/logos/black_background_logo.png` (light bg)
+
+**Key docs:**
+- `brandGuides/landing-page-prd.md` — full PRD, section specs, conversion goals, tone of voice
+- `brandGuides/AGENTS.md` — contributor notes
+
+## gstack
+
+Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude-in-chrome__*` tools.
+
+Available skills:
+- `/plan-ceo-review` — review a plan from a CEO/product perspective
+- `/plan-eng-review` — review a plan from an engineering perspective
+- `/review` — code review
+- `/ship` — ship a feature end-to-end
+- `/browse` — headless browser: navigate URLs, interact with elements, verify page state
+- `/qa` — QA a feature with browser automation
+- `/setup-browser-cookies` — configure browser session cookies
+- `/retro` — run a retrospective
+
+If gstack skills aren't working, run `cd .claude/skills/gstack && ./setup` to build the binary and register skills.

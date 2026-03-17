@@ -9,7 +9,7 @@ describe('/reserve page', () => {
 
   it('renders booking message', () => {
     render(<ReservePage />)
-    expect(screen.getByText(/book a reservation consultation to secure your atlas 2 units/i)).toBeInTheDocument()
+    expect(screen.getByText(/book a 30-minute consultation to configure your order and secure your units/i)).toBeInTheDocument()
   })
 
   it('renders Calendly fallback link', () => {

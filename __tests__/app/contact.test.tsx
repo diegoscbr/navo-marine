@@ -6,6 +6,6 @@ jest.mock('next/navigation', () => ({ usePathname: () => '/contact' }))
 describe('/contact page', () => {
   it('renders ContactSection heading', () => {
     render(<ContactPage />)
-    expect(screen.getByRole('heading', { name: /get in touch/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /work with navo/i })).toBeInTheDocument()
   })
 })

@@ -20,24 +20,28 @@ Customer Browser
       ▼
 Next.js App Router (existing)
       │
-      ├── /products/*          Storefront (DB-driven)
-      ├── /reserve             Rental booking flows
-      ├── /dashboard/*         Customer orders, rentals, return form
-      ├── /admin/*             Admin fleet, reservations, events, financials
+      ├── /products/*                  Storefront (DB-driven)
+      ├── /reserve                     Rental booking flows
+      ├── /dashboard/*                 Customer orders, rentals, return form
+      ├── /admin/*                     Admin fleet, reservations, events, financials
       │
-      ├── POST /api/checkout           → Stripe Checkout session
-      ├── POST /api/stripe/webhook     → Order/reservation state machine
-      └── POST /api/return/[id]        → Return form submission
+      ├── POST /api/checkout                        → Stripe Checkout session
+      ├── POST /api/stripe/webhook                  → Order/reservation state machine
+      ├── POST /api/return/[id]                     → Return form submission
+      └── PATCH /api/admin/reservations/[id]/assign → Admin unit assignment
             │
             ▼
-      Supabase Postgres
+      Supabase Postgres (service role key — server-side only)
             │
-            ├── pg_cron (hourly)   → expire unpaid reservations
-            └── RLS policies       → customer data isolation
+            ├── pg_cron (hourly)   → expire unpaid reservations + send return form emails
+            └── Row-level checks enforced in server API routes via NextAuth session
+                (NOT via Supabase auth.uid() — see Section 4 note)
 
-      Gmail API (Google Workspace service account)
+      Gmail API (Google Workspace service account + domain-wide delegation)
             └── transactional email: noreply@navomarine.com
 ```
+
+**Auth note:** This project uses NextAuth v5 + Google OAuth, not Supabase Auth. Supabase `auth.uid()` RLS therefore cannot be used — it has no awareness of NextAuth sessions. All row-level access control is enforced server-side in API routes by checking `session.user.email` and `session.user.id` from NextAuth before any Supabase query. The Supabase **service role key** is used exclusively on the server; the anon key is used for public read-only data only (product catalog, event listings).
 
 ## 3. Tech Stack
 
@@ -47,9 +51,9 @@ Next.js App Router (existing)
 | Database | Supabase Postgres (replaces SQLite/Prisma) |
 | Auth | NextAuth v5 + Google OAuth (existing) |
 | Payments | Stripe Checkout + Webhooks |
-| Email | Gmail API — Google Workspace service account |
-| Scheduling | Supabase `pg_cron` — 24hr unpaid reservation expiry |
-| DB client | Supabase JS client (replaces Prisma) |
+| Email | Gmail API — Google Workspace service account + domain-wide delegation |
+| Scheduling | Supabase `pg_cron` — 24hr expiry + return form email trigger |
+| DB client | Supabase JS client with service role key (server only) |
 | Dev tooling | Stripe MCP + Supabase MCP |
 
 ## 4. Roles & Access
@@ -58,6 +62,8 @@ Two roles: `admin` and `customer`.
 
 - **`admin`** — any `@navomarine.com` Google login. Automatically granted via existing middleware. Admin portal link visible in Navbar immediately after OAuth.
 - **`customer`** — all other authenticated users.
+
+**Access enforcement:** All protected API routes check `session.user.email` (NextAuth) server-side. No client-side role checks. Admin routes additionally verify `email.endsWith('@navomarine.com')`.
 
 | Capability | customer | admin |
 |---|---|---|
@@ -73,13 +79,13 @@ Two roles: `admin` and `customer`.
 
 Protected routes:
 ```
-/dashboard/*   → any authenticated user
+/dashboard/*   → any authenticated user (NextAuth session required)
 /admin/*       → @navomarine.com only (middleware enforced)
 ```
 
 ## 5. Data Model
 
-All money values stored as integer cents.
+All money values stored as integer cents. Prices displayed as USD; tax is included in `base_price_cents` — no separate tax calculation needed (Atlas 2 is sold tax-included; `tax_cents` on orders is always 0 and retained for future non-included-tax products).
 
 ### 5.1 Products (multi-product ready)
 
@@ -101,17 +107,30 @@ created_at            timestamptz default now()
 updated_at            timestamptz default now()
 ```
 
-**`product_media`**, **`product_sections`**, **`product_feature_bullets`**, **`product_spec_groups`**, **`product_specs`**, **`product_box_items`** — unchanged from March 2026 plan.
+**`product_media`** — gallery + hero media
+```
+id           uuid pk
+product_id   uuid fk -> products.id
+media_type   text check in ('image','video')
+url          text not null
+alt_text     text null
+sort_order   integer default 0
+```
+
+**`product_sections`**, **`product_feature_bullets`**, **`product_spec_groups`**, **`product_specs`**, **`product_box_items`** — per March 2026 plan (product marketing content blocks, tech specs, in-the-box items).
 
 **`addons`** — warranty, accessories, services (product-agnostic)
 ```
 id           uuid pk
 slug         text unique not null
 name         text not null
+description  text null
 addon_type   text check in ('warranty','accessory','service')
 price_cents  integer not null
 currency     text default 'usd'
 active       boolean default true
+created_at   timestamptz default now()
+updated_at   timestamptz default now()
 ```
 
 **`product_addons`** — join: which addons attach to which product
@@ -146,6 +165,8 @@ added_at      timestamptz default now()
 retired_at    timestamptz null       -- set on sold/lost/written off
 ```
 
+Status `returned` is a transient holding state after a customer submits a return form and before admin confirms the unit is back and available. Admin marks it `available` after physical inspection or from `/admin/returns`.
+
 **`unit_events`** — immutable audit log, append-only
 ```
 id           uuid pk
@@ -154,7 +175,7 @@ event_type   text not null   -- 'status_changed' | 'checked_in' | 'damage_report
 from_status  text null
 to_status    text null
 actor_type   text not null   -- 'admin' | 'customer' | 'system'
-actor_id     text null
+actor_id     text null       -- NextAuth user id or 'system'
 notes        text null
 metadata     jsonb default '{}'
 created_at   timestamptz default now()
@@ -174,15 +195,17 @@ active      boolean default true
 created_at  timestamptz default now()
 ```
 
-**`rental_event_products`** — which products are rentable at each event, at what price
+**`rental_event_products`** — which products are rentable at each event, at what price.
+`capacity` is the admin-set maximum units to send to this event for this product. Actual availability is computed at booking time as: `capacity - count(reservations WHERE event_id = X AND product_id = Y AND status IN ('reserved_unpaid','reserved_paid'))`. `inventory_status` is a manual admin-set flag for UI display (e.g. "Inventory On the Way") independent of capacity math.
 ```
 event_id            uuid fk -> rental_events.id
 product_id          uuid fk -> products.id
 rental_price_cents  integer not null
 late_fee_cents      integer not null default 3500
 reserve_cutoff_days integer not null default 14
-units_available     integer not null
-inventory_status    text check in ('in_stock','inventory_on_the_way','out_of_stock')
+capacity            integer not null          -- max units admin is sending to this event
+inventory_status    text not null default 'in_stock'
+                    check in ('in_stock','inventory_on_the_way','out_of_stock')
 primary key (event_id, product_id)
 ```
 
@@ -196,17 +219,24 @@ active      boolean default true
 created_at  timestamptz default now()
 ```
 
-**`date_window_allocations`** — which products/how many units per date window
+**`date_window_allocations`** — which products/how many units per date window.
+`capacity` same semantics as `rental_event_products.capacity` — admin-set cap, live availability computed from reservations.
 ```
 date_window_id  uuid fk -> date_windows.id
 product_id      uuid fk -> products.id
-units_available integer not null
+capacity        integer not null
 primary key (date_window_id, product_id)
 ```
 
 ### 5.4 Reservations
 
-**`reservations`** — covers all booking types (rental event, rental custom, purchase)
+**`reservations`** — covers all booking types (rental event, rental custom, purchase).
+
+For purchases: `reservation_type = 'purchase'`, `sail_number` is null, `event_id` and `date_window_id` are null. `unit_id` is null until admin assigns post-payment.
+For rentals: `sail_number` is required (enforced server-side before checkout session creation). `event_id` or `date_window_id` is set depending on rental type.
+
+Checkout session type is disambiguated via Stripe session `metadata.reservation_type` set at creation time. Webhook handler reads this field to route to the correct state machine branch.
+
 ```
 id                          uuid pk
 reservation_type            text not null check in ('rental_event','rental_custom','purchase')
@@ -214,11 +244,10 @@ product_id                  uuid fk -> products.id not null
 unit_id                     uuid fk -> units.id null          -- assigned post-payment by admin
 event_id                    uuid fk -> rental_events.id null
 date_window_id              uuid fk -> date_windows.id null
-user_id                     text not null                     -- auth user id
+user_id                     text not null                     -- NextAuth session user id
 customer_email              text not null
-sail_number                 text null                         -- required for all rentals
-status                      text not null default 'draft' check in (
-                              'draft',
+sail_number                 text null                         -- required for rentals, enforced in API
+status                      text not null default 'reserved_unpaid' check in (
                               'reserved_unpaid',
                               'reserved_paid',
                               'cancelled',
@@ -229,22 +258,48 @@ stripe_payment_intent_id    text null
 total_cents                 integer not null
 late_fee_applied            boolean default false
 late_fee_cents              integer not null default 0
-expires_at                  timestamptz null                  -- set to now()+24h when reserved_unpaid
+expires_at                  timestamptz null                  -- set to now()+24h on creation
 created_at                  timestamptz default now()
 updated_at                  timestamptz default now()
 ```
 
+`draft` status is removed — reservations are created at the point the customer initiates checkout, never earlier.
+
 ### 5.5 Cart & Orders
 
-**`carts`**, **`cart_items`** — unchanged from March 2026 plan.
+**`carts`** — persistent cart for guest or authenticated users
+```
+id                          uuid pk
+user_id                     text null
+status                      text check in ('active','converted','abandoned') default 'active'
+currency                    text not null default 'usd'
+stripe_checkout_session_id  text null
+expires_at                  timestamptz null
+created_at                  timestamptz default now()
+updated_at                  timestamptz default now()
+```
 
-**`orders`** — purchase ledger
+**`cart_items`** — line items (products, add-ons)
+```
+id                uuid pk
+cart_id           uuid fk -> carts.id
+item_type         text check in ('product_variant','addon')
+reference_id      uuid not null
+title_snapshot    text not null
+unit_price_cents  integer not null
+quantity          integer not null default 1
+metadata          jsonb default '{}'
+created_at        timestamptz default now()
+```
+
+**`orders`** — purchase ledger. One order is created per completed Stripe checkout session. For rentals, `reservation_id` links to the corresponding reservation row. For purchases, same.
 ```
 id                          uuid pk
 order_number                text unique not null
 user_id                     text null
 customer_email              text not null
 reservation_id              uuid fk -> reservations.id null
+shipping_address            jsonb null   -- { name, line1, line2, city, state, zip, country }
 status                      text check in ('pending','paid','fulfilled','cancelled','refunded')
 subtotal_cents              integer not null
 tax_cents                   integer not null default 0
@@ -257,16 +312,35 @@ created_at                  timestamptz default now()
 updated_at                  timestamptz default now()
 ```
 
-**`order_items`**, **`stripe_events`** — unchanged from March 2026 plan.
+**`order_items`** — immutable snapshot of purchased line items
+```
+id                  uuid pk
+order_id            uuid fk -> orders.id
+item_type           text not null
+reference_id        uuid null
+title_snapshot      text not null
+unit_price_cents    integer not null
+quantity            integer not null
+metadata_snapshot   jsonb default '{}'
+```
+
+**`stripe_events`** — idempotent webhook processing ledger
+```
+id               uuid pk
+stripe_event_id  text unique not null   -- prevents duplicate processing
+event_type       text not null
+payload          jsonb not null
+processed_at     timestamptz default now()
+```
 
 ### 5.6 Return Reports
 
-**`return_reports`** — customer end-of-event condition form submission
+**`return_reports`** — customer end-of-event condition form submission. One per reservation (enforced by unique constraint). Form is disabled in UI once submitted.
 ```
 id              uuid pk
-reservation_id  uuid fk -> reservations.id
+reservation_id  uuid fk -> reservations.id unique   -- one report per reservation
 unit_id         uuid fk -> units.id
-submitted_by    text not null     -- customer user_id
+submitted_by    text not null     -- NextAuth user id
 condition       text not null check in ('good','minor_damage','major_damage')
 notes           text null
 damage_flagged  boolean not null default false   -- auto-true if condition != 'good'
@@ -285,63 +359,141 @@ link        text null          -- optional deep-link to relevant page
 created_at  timestamptz default now()
 ```
 
-### 5.8 Scheduled Job
+### 5.8 Scheduled Jobs (pg_cron)
 
-**`pg_cron`** — runs every hour:
+Two `pg_cron` jobs, both implemented as Postgres stored procedures called by the scheduler.
+
+**Job 1 — Expire unpaid reservations (runs hourly)**
 ```sql
-SELECT id, unit_id FROM reservations
-WHERE status = 'reserved_unpaid' AND expires_at < now();
--- For each: set status = 'cancelled', unit status = 'available', fire notification
+CREATE OR REPLACE FUNCTION expire_unpaid_reservations()
+RETURNS void LANGUAGE plpgsql AS $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN
+    SELECT id, unit_id, customer_email, user_id
+    FROM reservations
+    WHERE status = 'reserved_unpaid' AND expires_at < now()
+  LOOP
+    -- Cancel reservation
+    UPDATE reservations
+    SET status = 'cancelled', updated_at = now()
+    WHERE id = r.id;
+
+    -- Free unit if one was tentatively linked
+    IF r.unit_id IS NOT NULL THEN
+      UPDATE units SET status = 'available' WHERE id = r.unit_id;
+      INSERT INTO unit_events (unit_id, event_type, from_status, to_status, actor_type, notes)
+      VALUES (r.unit_id, 'status_changed', 'reserved_unpaid', 'available', 'system',
+              'Reservation expired after 24 hours');
+    END IF;
+
+    -- Create in-app notification for customer
+    INSERT INTO notifications (user_id, message, link)
+    VALUES (r.user_id, 'Your reservation expired. Book again anytime.',
+            '/reserve');
+  END LOOP;
+END;
+$$;
+
+SELECT cron.schedule('expire-unpaid-reservations', '0 * * * *',
+  'SELECT expire_unpaid_reservations()');
+```
+Email to customer is fired by the Next.js API layer after reading newly cancelled reservations (polled after cron runs), not from within Postgres.
+
+**Job 2 — Send return form emails when events end (runs daily at 08:00 UTC)**
+```sql
+CREATE OR REPLACE FUNCTION send_return_form_reminders()
+RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  -- Insert notification rows for customers whose event ended yesterday
+  -- Next.js email worker picks these up and sends via Gmail API
+  INSERT INTO notifications (user_id, message, link)
+  SELECT r.user_id,
+         'Your event has ended. Please submit your return form.',
+         '/dashboard/rentals/' || r.id || '/return'
+  FROM reservations r
+  JOIN rental_events e ON e.id = r.event_id
+  WHERE r.status = 'reserved_paid'
+    AND e.end_date = current_date - 1
+    AND NOT EXISTS (
+      SELECT 1 FROM return_reports rr WHERE rr.reservation_id = r.id
+    );
+END;
+$$;
+
+SELECT cron.schedule('send-return-reminders', '0 8 * * *',
+  'SELECT send_return_form_reminders()');
 ```
 
-## 6. User Flows
+## 6. API Routes
 
-### 6.1 Purchase
+| Method | Route | Auth | Purpose |
+|---|---|---|---|
+| POST | `/api/checkout` | customer/admin | Create Stripe Checkout session. Sets `metadata.reservation_type`. Validates sail_number for rentals server-side. Checks live availability (count query) before creating session. |
+| POST | `/api/stripe/webhook` | Stripe signature | State machine: routes on `metadata.reservation_type`. `checkout.session.completed` → creates order + sets reservation `reserved_paid`. Deduplicates via `stripe_events`. |
+| POST | `/api/return/[id]` | customer (owns reservation) | Submit return form. Creates `return_reports` row. Updates unit status. Fires notifications. |
+| PATCH | `/api/admin/reservations/[id]/assign` | admin | Assign a specific unit to a paid reservation. Validates unit is `available` or `reserved_paid` for same reservation. Updates `reservations.unit_id` + `units.status`. Appends `unit_events`. Fires "unit assigned" email to customer. |
+| PATCH | `/api/admin/units/[id]/status` | admin | Manual unit status override. Validates target unit has no conflicting active paid reservation before allowing override to `available`. Requires notes. Appends `unit_events`. |
+
+## 7. User Flows
+
+### 7.1 Purchase
 1. Customer lands on `/products/[slug]`, selects quantity + add-ons
-2. Adds to cart → `POST /api/checkout` creates Stripe Checkout session
-3. Customer pays on Stripe hosted page
-4. Webhook `checkout.session.completed` → order created (status: `paid`), reservation created (status: `reserved_paid`)
-5. Admin assigns a specific unit in `/admin/reservations` → unit status: `sold`, `retired_at` set
+2. Shipping address captured on checkout page before Stripe redirect
+3. Adds to cart → `POST /api/checkout` with `metadata.reservation_type = 'purchase'` creates Stripe Checkout session
+4. Customer pays on Stripe hosted page
+5. Webhook `checkout.session.completed` → order created (`paid`), reservation created (`reserved_paid`), `shipping_address` stored on order
+6. Admin assigns a specific unit via `PATCH /api/admin/reservations/[id]/assign` → unit status: `sold`, `retired_at` set, customer email sent
 
-### 6.2 Rental — Event-Based
+### 7.2 Rental — Event-Based
 1. Customer goes to `/reserve`, selects "Rent for an Event" tab
-2. Selects product, then event from dropdown (only active events with `in_stock` status shown)
-3. Enters sail number
+2. Selects product, then event from dropdown (only active events with `inventory_status != 'out_of_stock'` shown; live capacity shown per product)
+3. Enters sail number (required — form blocks submission without it)
 4. System shows price + late fee if booking is within `reserve_cutoff_days` of event start
-5. Checkout → Stripe → Webhook → reservation: `reserved_paid`, unit: `reserved_paid` (admin assigns specific unit)
-6. Admin updates unit to `in_transit` → `at_event` as it moves
-7. Event ends → customer receives return form email link
-8. Customer submits `/dashboard/rentals/[id]/return` → condition report
-9. If damage: unit → `damaged`, admin alert fired. If clean: unit → `returned` → `available`
+5. `POST /api/checkout`: server validates sail_number present, runs live availability count, sets `expires_at = now()+24h`, sets `metadata.reservation_type = 'rental_event'`
+6. Webhook → reservation: `reserved_paid`
+7. Admin assigns unit + advances status through `reserved_paid → in_transit → at_event`
+8. `pg_cron` job fires next morning after `end_date` → return form notification to customer
+9. Customer submits `/dashboard/rentals/[id]/return`
+10. If damage: unit → `damaged`, admin alert fired. If clean: unit → `returned` (admin confirms → `available`)
 
-### 6.3 Rental — Custom Dates
+### 7.3 Rental — Custom Dates
 1. Customer selects "Custom Dates" tab on `/reserve`
-2. Only admin-published date windows shown (with available unit counts per product)
-3. Selects window, enters sail number → same checkout flow as event-based
+2. Only admin-published date windows shown (live availability count per product per window)
+3. Selects window, enters sail number → same checkout flow, `metadata.reservation_type = 'rental_custom'`
 4. Reservation linked to `date_window_id` instead of `event_id`
 
-### 6.4 Unpaid Expiry
+### 7.4 Availability Check (no race condition)
+Unit assignment is always manual — no unit is speculatively locked at booking time. Availability is enforced by capacity caps. At `POST /api/checkout`:
+```
+live_count = COUNT(reservations WHERE (event_id OR date_window_id) = X
+             AND product_id = Y
+             AND status IN ('reserved_unpaid', 'reserved_paid'))
+IF live_count >= capacity → reject with "Sorry, this event is fully booked"
+ELSE → create reservation + Stripe session
+```
+No SELECT FOR UPDATE needed. Two simultaneous requests that both pass the count check will both create reservations; if this pushes count over capacity, the next request will be rejected. At 50 max concurrent users this is an acceptable and rare edge case — over-booking by one unit is operationally manageable and the admin can cancel + refund one reservation manually.
+
+### 7.5 Unpaid Expiry
 - On reservation creation: `status = 'reserved_unpaid'`, `expires_at = now() + 24 hours`
-- `pg_cron` fires hourly: expired reservations → `cancelled`, unit freed, customer email sent
+- `pg_cron` fires hourly: expired reservations → `cancelled`, unit freed, in-app notification created
+- Email to customer fired by Next.js email worker polling `notifications` table
 
-### 6.5 Race Condition Handling
-- Unit assignment happens inside webhook handler using `SELECT FOR UPDATE` transaction
-- If two payments land simultaneously and one unit remains: second transaction triggers automatic Stripe refund + customer notification
-
-## 7. Admin Dashboard — `/admin`
+## 8. Admin Dashboard — `/admin`
 
 | Route | Purpose |
 |---|---|
 | `/admin` | KPI overview: units available, out on rental, unpaid expiring, open damage reports, recent activity feed |
-| `/admin/fleet` | Full unit table (status, current reservation, location). Add/retire units. Click unit → audit log. Manual status override |
-| `/admin/reservations` | All reservations filtered by status/type/event/date. Assign unit to paid reservation. Manual cancel + refund trigger |
-| `/admin/events` | CRUD for rental events + `rental_event_products` allocations. CRUD for date windows + allocations |
-| `/admin/returns` | All return form submissions. Damage-flagged reports surfaced first. Mark unit repaired → available |
+| `/admin/fleet` | Full unit table (status, current reservation, location). Add/retire units. Click unit → audit log. Manual status override (blocked if active paid reservation exists — shows warning, requires confirmation) |
+| `/admin/reservations` | All reservations filtered by status/type/event/date. Unpaid show countdown. Assign unit to paid reservation. Manual cancel + Stripe refund trigger |
+| `/admin/events` | CRUD for rental events + `rental_event_products` allocations + `inventory_status`. CRUD for date windows + allocations |
+| `/admin/returns` | All return form submissions. Damage-flagged surfaced first. Mark repaired → unit status `available` |
 | `/admin/orders` | Financial view: all orders, Stripe payment intent links, manual status override |
 
 Admin portal link in Navbar visible immediately after `@navomarine.com` OAuth.
 
-## 8. Customer Dashboard — `/dashboard`
+## 9. Customer Dashboard — `/dashboard`
 
 | Route | Purpose |
 |---|---|
@@ -349,12 +501,13 @@ Admin portal link in Navbar visible immediately after `@navomarine.com` OAuth.
 | `/dashboard/orders` | Purchase history with status badges |
 | `/dashboard/orders/[id]` | Line-item snapshot, payment method, Stripe receipt link |
 | `/dashboard/rentals` | Rental reservation history: event/dates/unit number/sail number/status |
-| `/dashboard/rentals/[id]/return` | Return form: condition (good / minor damage / major damage) + notes |
+| `/dashboard/rentals/[id]/return` | Return form: condition + notes. Disabled once submitted. |
 | `/dashboard/warranty` | Purchased warranty add-ons by order |
 
-## 9. Notifications
+## 10. Notifications
 
-**Transport:** Gmail API via Google Workspace service account, sent from `noreply@navomarine.com`.
+**Transport:** Gmail API via Google Workspace **service account with domain-wide delegation**. Uses a service account JSON key (not OAuth user credentials). Sends as `noreply@navomarine.com`. Service account key stored as env var `GMAIL_SERVICE_ACCOUNT_KEY` (JSON string).
+
 **In-app:** `notifications` table, bell icon in Navbar for both admin and customer.
 
 ### Customer email triggers
@@ -362,23 +515,21 @@ Admin portal link in Navbar visible immediately after `@navomarine.com` OAuth.
 |---|---|
 | Reservation created (unpaid) | "Complete your booking within 24 hours" |
 | Payment confirmed | "Booking confirmed — unit will be assigned shortly" |
-| Unit assigned | "Your unit #07 is confirmed for [Event]" |
+| Unit assigned (`/api/admin/reservations/[id]/assign`) | "Your unit #07 is confirmed for [Event]" |
 | Unit marked in transit | "Your unit is on its way to the event" |
 | Reservation expired | "Your reservation expired — book again anytime" |
-| Return form (event ending) | "Please submit your return form" |
+| Return form (event end date +1 day, via pg_cron) | "Please submit your return form" |
 | Damage flagged | "Thanks for your report — our team will follow up" |
 
 ### Admin email triggers
 | Trigger | Message |
 |---|---|
-| New paid reservation | "New booking: [Customer] — [Product] — [Event]" |
+| New paid reservation (webhook) | "New booking: [Customer] — [Product] — [Event]" |
 | Reservation expired | "Unit freed: reservation expired for [Customer]" |
 | Damage reported | "⚠️ Damage reported on unit #07 by [Customer]" |
 | Unit returned (clean) | "Unit #07 returned — available for reassignment" |
 
-## 10. MCP Dev Tooling Setup
-
-Two MCP servers configured for development:
+## 11. MCP Dev Tooling Setup
 
 **Stripe MCP** — already installed (`/plugin install stripe`). Enables Claude to create products, prices, and webhooks directly in Stripe during implementation.
 
@@ -386,7 +537,12 @@ Two MCP servers configured for development:
 ```bash
 claude mcp add supabase
 ```
-Enables Claude to run migrations, inspect tables, and configure RLS policies directly.
+Enables Claude to run migrations, inspect tables, and manage data directly.
+
+**Stripe local webhook forwarding** (Phase 4 dev):
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+```
 
 Required `.env.local` keys:
 ```
@@ -394,99 +550,98 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 STRIPE_SECRET_KEY=
-STRIPE_PUBLISHABLE_KEY=
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
 STRIPE_WEBHOOK_SECRET=
-GMAIL_CLIENT_ID=
-GMAIL_CLIENT_SECRET=
-GMAIL_REFRESH_TOKEN=
+GMAIL_SERVICE_ACCOUNT_KEY=          # full JSON string of service account key file
 GMAIL_FROM_ADDRESS=noreply@navomarine.com
 ```
 
-## 11. Phased Delivery
+## 12. Phased Delivery
 
 Each phase ends with a **user E2E testing gate** — owner personally tests before the next phase begins.
 
 ### Phase 1 — Foundation
 - Install Supabase MCP, create Supabase project
 - Write and run all migrations (full schema above)
-- Seed: Atlas 2 product, 40 units (01–40), sample event
+- Seed: Atlas 2 product, 40 units (01–40), sample rental event
 - Migrate existing SQLite admin product data to Supabase
 - Remove Prisma/SQLite, swap in Supabase JS client
 
-**E2E gate:** Supabase table editor shows all 40 units. Admin product pages still work.
+**E2E gate:** Supabase table editor shows all 40 units. Admin product pages still work. Visit `/admin/fleet` stub shows unit list.
 
 ### Phase 2 — Storefront + Fleet Admin
 - `/products/[slug]` renders from Supabase (all product data DB-driven)
-- `/admin/fleet`: view, add, retire units; manual status override; audit log per unit
+- `/admin/fleet`: view, add, retire units; manual status override with validation; audit log per unit
 
-**E2E gate:** Visit Atlas 2 product page. Admin: add a test unit, change its status, verify audit log.
+**E2E gate:** Visit Atlas 2 product page — content renders from DB. Admin: add a test unit, change its status, verify audit log entry. Attempt to override a paid-reservation unit to `available` — confirm warning appears.
 
 ### Phase 3 — Reservation Flows + Stripe Checkout
 - Install Stripe MCP, create Stripe account + products/prices
-- `/reserve`: event-based and custom-date rental booking UI
-- `POST /api/checkout` — Stripe Checkout session creation
-- Late fee logic, sail number capture, 24hr expiry set on reservation creation
+- `/reserve`: event-based and custom-date rental booking UI with live availability counts
+- `POST /api/checkout` — session creation with sail_number validation, availability check, `expires_at` set, `metadata.reservation_type` embedded
 
-**E2E gate:** Complete a rental booking end-to-end in Stripe test mode. Verify reservation row created, unit status updated, expiry set.
+**E2E gate:** Book a rental in Stripe test mode. Verify reservation row created with `reserved_unpaid` status and `expires_at` 24h out. Verify capacity count decrements on UI.
 
 ### Phase 4 — Webhooks + Expiry + Unit Assignment
-- `POST /api/stripe/webhook` — state machine for checkout.session.completed, refunds
-- `pg_cron` hourly expiry job
-- Admin: assign specific unit to paid reservation in `/admin/reservations`
+- `POST /api/stripe/webhook` — full state machine, idempotency via `stripe_events`
+- `stripe listen` local forwarding for dev
+- `pg_cron` expiry job deployed
+- `PATCH /api/admin/reservations/[id]/assign` — admin unit assignment endpoint
+- `/admin/reservations` assign-unit UI
 
-**E2E gate:** Pay for a rental, verify webhook transitions reservation to `reserved_paid`. Let an unpaid reservation expire, verify unit freed.
+**E2E gate:** Pay for a rental, verify webhook transitions to `reserved_paid`. Let an unpaid reservation hit 24h, verify `pg_cron` cancels it and frees the unit. Admin assigns a unit — verify `unit_events` entry created.
 
-### Phase 5 — Return Form + Damage Reporting
-- `/dashboard/rentals/[id]/return` — customer return form
-- Condition report → auto-flag unit as damaged if needed
-- Admin `/admin/returns` — review and mark repaired
+### Phase 5 — Return Form + Damage Reporting + Customer Dashboard
+- `/dashboard/rentals/[id]/return` — customer return form (condition + notes, disabled after submit)
+- `POST /api/return/[id]` — condition report processing, unit status update
+- `/admin/returns` — damage report review, mark repaired
+- `/dashboard/orders`, `/dashboard/rentals`, `/dashboard/warranty` — customer history views
 
-**E2E gate:** Submit return form with damage. Verify unit status → `damaged`. Mark repaired in admin, verify unit → `available`.
+**E2E gate:** Submit return form with damage. Verify unit → `damaged`. Mark repaired in admin → `available`. Verify form is disabled on second visit. Customer views order and rental history.
 
-### Phase 6 — Gmail Notifications
-- Google Workspace service account + Gmail API setup
-- All customer + admin email triggers wired up
-- In-app `notifications` table + bell icon in Navbar
+### Phase 6 — Gmail Notifications + In-App Bell
+- Google Workspace service account setup + domain-wide delegation
+- Gmail API integration — all email triggers wired
+- `pg_cron` return form reminder job deployed
+- `notifications` table + bell icon in Navbar
 
-**E2E gate:** Complete a booking end-to-end, verify confirmation email received. Submit return form, verify admin damage alert email.
+**E2E gate:** Complete full booking → confirmation email arrives. Submit damage report → admin alert email arrives. Wait for daily cron or manually trigger return reminder → email arrives.
 
-### Phase 7 — Customer Dashboard
-- `/dashboard/orders`, `/dashboard/rentals`, `/dashboard/warranty`
-- Order and rental history views
-
-**E2E gate:** Log in as customer. Verify past bookings visible. Verify return form accessible from rental detail.
-
-### Phase 8 — Admin Dashboard + QA
-- `/admin/events`, `/admin/orders`, `/admin/reservations` full build-out
-- Navbar admin portal link post-OAuth
+### Phase 7 — Admin Dashboard + Purchase Flow + QA
+- `/admin/events`, `/admin/orders` full build-out
+- Purchase flow with shipping address capture
+- Admin assigns unit to purchase → unit `sold`
+- Navbar admin portal link visibility after `@navomarine.com` login
 - End-to-end QA pass across all flows
 
-**E2E gate:** Full walkthrough — book, pay, assign unit, transit, event, return, damage, repair. Verify every status transition and notification.
+**E2E gate:** Full walkthrough — purchase (with shipping address), rental, pay, assign unit, transit, event end, return, damage, repair. Verify every status transition, every notification email, every audit log entry.
 
-## 12. Key Implementation Rules
+## 13. Key Implementation Rules
 
 1. **Never trust client pricing** — all totals recalculated server-side before Stripe session creation
 2. **Snapshot order items** — titles/prices frozen at purchase time; product edits don't affect past orders
 3. **Webhook idempotency is mandatory** — `stripe_events.stripe_event_id` unique constraint prevents duplicate fulfillment
-4. **Unit assignment is manual** — admin picks which physical unit to fulfil each paid reservation; never auto-assign
-5. **Race condition protection** — unit availability check at webhook time uses `SELECT FOR UPDATE`; loser gets automatic refund
+4. **Unit assignment is always manual** — admin picks which physical unit fulfils each paid reservation; never auto-assign
+5. **No Supabase RLS** — access control enforced in Next.js API routes via NextAuth session. Service role key is server-only, never exposed to client
 6. **Audit log is append-only** — never update or delete `unit_events` rows
-7. **RLS on customer data** — `reservations`, `orders`, `notifications` scoped to `auth.uid()` via Supabase RLS
-8. **pg_cron expiry is the source of truth** — do not rely on client-side timers for expiry
-9. **Multi-product by default** — all event/window availability is per-product, never a single inventory count
-10. **Gmail API only** — no third-party email service; all transactional email via Google Workspace service account
+7. **pg_cron is source of truth for expiry** — do not rely on client-side timers
+8. **Multi-product by default** — all event/window availability is per-product via join tables
+9. **Gmail service account only** — no third-party email service; JSON key via env var, domain-wide delegation
+10. **sail_number enforced server-side** — validated in `POST /api/checkout` before session creation, not in DB constraint
+11. **Admin unit override blocked on active paid reservations** — API returns 409 with explanation; admin must cancel reservation first
+12. **Checkout session type embedded in Stripe metadata** — `metadata.reservation_type` routes webhook to correct handler branch
 
-## 13. Definition of Done (MVP)
+## 14. Definition of Done (MVP)
 
 - [ ] All 40 units visible and manageable in admin fleet view
 - [ ] Atlas 2 product page rendered from Supabase
 - [ ] Customer can book a rental (event + custom date) end-to-end in Stripe test mode
-- [ ] Customer can purchase a unit end-to-end in Stripe test mode
-- [ ] Webhook transitions reservation and unit statuses correctly
-- [ ] Unpaid reservations auto-expire after 24 hours
-- [ ] Admin can assign a unit to a paid reservation
-- [ ] Customer can submit return form; damage auto-flags unit
+- [ ] Customer can purchase a unit end-to-end in Stripe test mode (with shipping address)
+- [ ] Webhook transitions reservation and unit statuses correctly, idempotently
+- [ ] Unpaid reservations auto-expire after 24 hours via pg_cron
+- [ ] Admin can assign a unit to a paid reservation; customer receives "unit assigned" email
+- [ ] Customer can submit return form; damage auto-flags unit; form disabled after submit
 - [ ] Admin receives email on new booking and damage report
-- [ ] Customer receives confirmation and return form emails
+- [ ] Customer receives confirmation, "unit assigned", and return form reminder emails
 - [ ] Admin portal visible in Navbar after `@navomarine.com` login
 - [ ] Second product can be added with zero schema changes

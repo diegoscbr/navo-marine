@@ -1,7 +1,7 @@
 # Navo Marine — Commerce, Rental & Inventory System Design
 
 **Date:** 2026-03-16
-**Status:** Approved
+**Status:** Approved (CEO review complete 2026-03-16)
 **Scope:** Direct sales and rentals via storefront, physical unit fleet tracking, Supabase + Stripe integration, admin/customer dashboards, Gmail notifications.
 
 ---
@@ -339,7 +339,7 @@ processed_at     timestamptz default now()
 ```
 id              uuid pk
 reservation_id  uuid fk -> reservations.id unique   -- one report per reservation
-unit_id         uuid fk -> units.id
+unit_id         uuid fk -> units.id null             -- nullable: unit may not be assigned yet at time of submission
 submitted_by    text not null     -- NextAuth user id
 condition       text not null check in ('good','minor_damage','major_damage')
 notes           text null
@@ -399,7 +399,7 @@ $$;
 SELECT cron.schedule('expire-unpaid-reservations', '0 * * * *',
   'SELECT expire_unpaid_reservations()');
 ```
-Email to customer is fired by the Next.js API layer after reading newly cancelled reservations (polled after cron runs), not from within Postgres.
+Email to customer is sent **directly from the calling API route or webhook handler** that triggers the cancellation — not via a polling mechanism. The `notifications` table is UI-only (bell icon feed); it is NOT an email queue. Gmail API calls are non-blocking: a failed send must be logged but must NOT cause the API handler to fail or retry.
 
 **Job 2 — Send return form emails when events end (runs daily at 08:00 UTC)**
 ```sql
@@ -407,7 +407,9 @@ CREATE OR REPLACE FUNCTION send_return_form_reminders()
 RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
   -- Insert notification rows for customers whose event ended yesterday
-  -- Next.js email worker picks these up and sends via Gmail API
+  -- NOTE: pg_cron only creates the in-app notification rows.
+  -- Email sending is handled by a separate Vercel Cron job that calls
+  -- POST /api/worker/send-return-reminders (or equivalent) once per day after this job runs.
   INSERT INTO notifications (user_id, message, link)
   SELECT r.user_id,
          'Your event has ended. Please submit your return form.',
@@ -441,17 +443,22 @@ SELECT cron.schedule('send-return-reminders', '0 8 * * *',
 ### 7.1 Purchase
 1. Customer lands on `/products/[slug]`, selects quantity + add-ons
 2. Shipping address captured on checkout page before Stripe redirect
-3. Adds to cart → `POST /api/checkout` with `metadata.reservation_type = 'purchase'` creates Stripe Checkout session
+3. Adds to cart → `POST /api/checkout`:
+   - **Step A:** Create Stripe Checkout session first (if Stripe fails here, return 503 — nothing written to DB)
+   - **Step B:** Create reservation + cart converted rows with `stripe_checkout_session_id` already known
+   - Returns Stripe session URL to redirect customer
 4. Customer pays on Stripe hosted page
-5. Webhook `checkout.session.completed` → order created (`paid`), reservation created (`reserved_paid`), `shipping_address` stored on order
+5. Webhook `checkout.session.completed` → order created (`paid`), reservation updated to `reserved_paid`, `shipping_address` stored on order. **All three DB writes in a single transaction (Supabase RPC).**
 6. Admin assigns a specific unit via `PATCH /api/admin/reservations/[id]/assign` → unit status: `sold`, `retired_at` set, customer email sent
+
+**Note: Cart is purchase-only.** The cart (`carts`/`cart_items`) is used exclusively for product purchases. Rentals bypass the cart and go directly to `POST /api/checkout` with rental-specific params.
 
 ### 7.2 Rental — Event-Based
 1. Customer goes to `/reserve`, selects "Rent for an Event" tab
 2. Selects product, then event from dropdown (only active events with `inventory_status != 'out_of_stock'` shown; live capacity shown per product)
 3. Enters sail number (required — form blocks submission without it)
 4. System shows price + late fee if booking is within `reserve_cutoff_days` of event start
-5. `POST /api/checkout`: server validates sail_number present, runs live availability count, sets `expires_at = now()+24h`, sets `metadata.reservation_type = 'rental_event'`
+5. `POST /api/checkout`: server validates sail_number present AND event_id present and active, runs live availability count, then creates Stripe session first (if Stripe fails, return 503 — nothing written to DB), then creates reservation with `stripe_checkout_session_id` set, `expires_at = now()+24h`, `metadata.reservation_type = 'rental_event'`
 6. Webhook → reservation: `reserved_paid`
 7. Admin assigns unit + advances status through `reserved_paid → in_transit → at_event`
 8. `pg_cron` job fires next morning after `end_date` → return form notification to customer
@@ -508,7 +515,9 @@ Admin portal link in Navbar visible immediately after `@navomarine.com` OAuth.
 
 **Transport:** Gmail API via Google Workspace **service account with domain-wide delegation**. Uses a service account JSON key (not OAuth user credentials). Sends as `noreply@navomarine.com`. Service account key stored as env var `GMAIL_SERVICE_ACCOUNT_KEY` (JSON string).
 
-**In-app:** `notifications` table, bell icon in Navbar for both admin and customer.
+**Email delivery pattern:** Emails are sent **directly and synchronously from the API route or webhook handler** that triggers each event (not via a background polling worker). Gmail API calls are **non-blocking** — a failed send must be caught, logged, and allowed to continue. It must never cause an API handler to fail, return 500, or prevent order/reservation state updates.
+
+**In-app:** `notifications` table, bell icon in Navbar for both admin and customer. The `notifications` table is **UI-only** — it is NOT used as an email queue.
 
 ### Customer email triggers
 | Trigger | Message |
@@ -561,13 +570,17 @@ GMAIL_FROM_ADDRESS=noreply@navomarine.com
 Each phase ends with a **user E2E testing gate** — owner personally tests before the next phase begins.
 
 ### Phase 1 — Foundation
+
+**Important:** Phase 1 must be done in a feature branch (not on `main`). Merge to main only after E2E gate passes. Phase 1 removes Prisma/SQLite — this is a one-way door. Keep `main` operational until the gate confirms Supabase is working.
+
 - Install Supabase MCP, create Supabase project
-- Write and run all migrations (full schema above)
+- Enable `pg_cron` extension in Supabase project settings
+- Write and run all migrations (full schema above, including all indexes from TODOS.md)
 - Seed: Atlas 2 product, 40 units (01–40), sample rental event
-- Migrate existing SQLite admin product data to Supabase
+- Migrate existing SQLite admin product data to Supabase (export from Prisma, import to Supabase)
 - Remove Prisma/SQLite, swap in Supabase JS client
 
-**E2E gate:** Supabase table editor shows all 40 units. Admin product pages still work. Visit `/admin/fleet` stub shows unit list.
+**E2E gate:** Supabase table editor shows all 40 units. Admin product pages still work. Visit `/admin/fleet` stub shows unit list. **Only merge to `main` after this gate passes.**
 
 ### Phase 2 — Storefront + Fleet Admin
 - `/products/[slug]` renders from Supabase (all product data DB-driven)
@@ -620,16 +633,19 @@ Each phase ends with a **user E2E testing gate** — owner personally tests befo
 
 1. **Never trust client pricing** — all totals recalculated server-side before Stripe session creation
 2. **Snapshot order items** — titles/prices frozen at purchase time; product edits don't affect past orders
-3. **Webhook idempotency is mandatory** — `stripe_events.stripe_event_id` unique constraint prevents duplicate fulfillment
+3. **Webhook idempotency is mandatory** — `stripe_events.stripe_event_id` unique constraint prevents duplicate fulfillment. All three webhook writes (stripe_events + order + reservation update) must be wrapped in a Supabase DB transaction (RPC) — partial writes are not acceptable
 4. **Unit assignment is always manual** — admin picks which physical unit fulfils each paid reservation; never auto-assign
-5. **No Supabase RLS** — access control enforced in Next.js API routes via NextAuth session. Service role key is server-only, never exposed to client
+5. **No Supabase RLS** — access control enforced in Next.js API routes via NextAuth session. Service role key is server-only, never exposed to client. **CRITICAL: every new API route must call `requireAuth()` or `requireAdmin()` before any Supabase query — there is no DB-level fallback**
 6. **Audit log is append-only** — never update or delete `unit_events` rows
 7. **pg_cron is source of truth for expiry** — do not rely on client-side timers
 8. **Multi-product by default** — all event/window availability is per-product via join tables
-9. **Gmail service account only** — no third-party email service; JSON key via env var, domain-wide delegation
+9. **Gmail service account only** — no third-party email service; JSON key via env var, domain-wide delegation. Gmail calls are non-blocking: catch errors, log them, never throw
 10. **sail_number enforced server-side** — validated in `POST /api/checkout` before session creation, not in DB constraint
 11. **Admin unit override blocked on active paid reservations** — API returns 409 with explanation; admin must cancel reservation first
 12. **Checkout session type embedded in Stripe metadata** — `metadata.reservation_type` routes webhook to correct handler branch
+13. **Stripe session created before reservation row** — call Stripe API first; only write to DB once a valid session_id is obtained. If Stripe fails, return 503 with no DB writes
+14. **Cart is purchase-only** — the `carts`/`cart_items` system handles product purchases only. Rentals bypass the cart and call `POST /api/checkout` directly with event/window params
+15. **Admin assignment must verify reservation is still active** — before assigning a unit, verify `reservation.status = 'reserved_paid'` in the same DB transaction to prevent assigning to a pg_cron-cancelled reservation
 
 ## 14. Definition of Done (MVP)
 

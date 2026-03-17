@@ -23,11 +23,11 @@ export default function ProductsPage() {
           Performance hardware and instrumentation for competitive sailing teams.
         </p>
 
-        <div className="mt-10 grid gap-5 sm:grid-cols-2">
+        <div className="mt-10 grid gap-5">
           {storefrontProducts.map((product) => (
             <article
               key={product.id}
-              className="rounded-xl border border-white/10 bg-navy-800/60 p-6"
+              className="max-w-2xl rounded-xl border border-white/10 bg-navy-800/60 p-8"
             >
               <p className="text-xs uppercase tracking-[0.2em] text-cyan-glow">Product</p>
               <h2 className="font-heading mt-2 text-2xl font-semibold text-white">{product.name}</h2>

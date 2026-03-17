@@ -73,7 +73,7 @@ function toStorefrontProduct(row: DBProductRow): StorefrontProduct {
     descriptionShort: row.description_short ?? '',
     pricing: {
       amountCents: row.base_price_cents,
-      currency: 'usd',
+      currency: row.currency,
       taxIncluded: row.tax_included,
     },
     inTheBox: [...row.product_box_items]
@@ -87,7 +87,7 @@ function toStorefrontProduct(row: DBProductRow): StorefrontProduct {
         body: s.body_markdown ?? '',
         bullets: [...s.product_feature_bullets]
           .sort((a, b) => a.sort_order - b.sort_order)
-          .map((b) => b.bullet_text),
+          .map((bullet) => bullet.bullet_text),
       })),
     techSpecs: [...row.product_spec_groups]
       .sort((a, b) => a.sort_order - b.sort_order)

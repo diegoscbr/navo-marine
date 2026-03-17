@@ -121,4 +121,9 @@ describe('listStorefrontProducts', () => {
     const results = await listStorefrontProducts()
     expect(results).toEqual([])
   })
+
+  it('throws when query fails', async () => {
+    mockOrder.mockResolvedValueOnce({ data: null, error: { message: 'DB error' } })
+    await expect(listStorefrontProducts()).rejects.toThrow('listStorefrontProducts: DB error')
+  })
 })

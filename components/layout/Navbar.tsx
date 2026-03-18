@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { Button } from '@/components/ui/Button'
-import { ReserveCalendlyTrigger } from '@/components/ui/ReserveCalendlyTrigger'
 
 const navLinks = [
   { label: 'Products', href: '/products' },
@@ -58,11 +57,13 @@ export function Navbar() {
             </li>
           ))}
           <li>
-            <ReserveCalendlyTrigger
-              as="link"
-              label="Reserve"
+            <Link
+              href="/reserve"
               className="inline-flex items-center py-3 px-1 text-sm text-white/70 transition-colors hover:text-white"
-            />
+              aria-current={pathname === '/reserve' ? 'page' : undefined}
+            >
+              Reserve
+            </Link>
           </li>
         </ul>
 

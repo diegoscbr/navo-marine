@@ -113,7 +113,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
       </p>
       <p className="mt-2 text-xs text-white/40">
         Need a rental instead?{' '}
-        <Link className="inline-flex py-2 text-marine-400 underline-offset-4 hover:underline" href="/reserve">
+        <Link className="inline-flex min-h-11 items-center text-marine-400 underline-offset-4 hover:underline" href="/reserve">
           Reserve Atlas 2
         </Link>
         .

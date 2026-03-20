@@ -32,7 +32,7 @@ export function ProductInfoCards({ product, warranty }: ProductInfoCardsProps) {
           href={product.support.manualUrl}
           target="_blank"
           rel="noreferrer"
-          className="text-marine-400 underline-offset-4 hover:underline"
+          className="inline-flex min-h-11 items-center text-marine-400 underline-offset-4 hover:underline"
         >
           support.vakaros.com
         </Link>

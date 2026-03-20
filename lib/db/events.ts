@@ -18,6 +18,7 @@ export type RentalEvent = {
   event_url: string | null
   start_date: string
   end_date: string
+  rental_price_per_day_cents?: number
   rental_event_products: RentalEventProduct[]
 }
 

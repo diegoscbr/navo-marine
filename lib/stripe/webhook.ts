@@ -12,7 +12,7 @@ export type FulfillResult =
 
 export function generateOrderNumber(): string {
   const year = new Date().getFullYear()
-  const suffix = Date.now().toString(36).toUpperCase().slice(-6)
+  const suffix = crypto.randomUUID().replace(/-/g, '').toUpperCase().slice(-8)
   return `NAVO-${year}-${suffix}`
 }
 
@@ -71,15 +71,7 @@ export async function fulfillCheckoutSession(
     return { ok: false, error: `Failed to update reservation: ${updateErr.message}` }
   }
 
-  // 3. Update unit status if a unit was assigned
-  if ((reservation as { unit_id: string | null }).unit_id) {
-    await supabaseAdmin
-      .from('units')
-      .update({ status: 'reserved_paid' })
-      .eq('id', (reservation as { unit_id: string }).unit_id)
-  }
-
-  // 4. Create order record
+  // 3. Create order record (before unit update to minimize partial-failure window)
   const orderNumber = generateOrderNumber()
   const { data: order, error: orderErr } = await supabaseAdmin
     .from('orders')
@@ -104,6 +96,19 @@ export async function fulfillCheckoutSession(
 
   if (orderErr) {
     return { ok: false, error: `Failed to create order: ${orderErr.message}` }
+  }
+
+  // 4. Update unit status if a unit was assigned (non-critical after order creation)
+  if ((reservation as { unit_id: string | null }).unit_id) {
+    const { error: unitErr } = await supabaseAdmin
+      .from('units')
+      .update({ status: 'reserved_paid' })
+      .eq('id', (reservation as { unit_id: string }).unit_id)
+
+    if (unitErr) {
+      console.error(`Unit status update failed for unit ${(reservation as { unit_id: string }).unit_id}:`, unitErr.message)
+      // Non-fatal: order was already created, reservation is paid. Log and continue.
+    }
   }
 
   return { ok: true, orderId: (order as { id: string }).id }

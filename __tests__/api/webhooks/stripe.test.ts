@@ -98,8 +98,9 @@ function makeRequest(body: string, sig = 'valid-sig'): NextRequest {
 // 1. stripe_events.select().eq().maybeSingle()   — idempotency check (not seen)
 // 2. reservations.select().eq().single()          — find reservation
 // 3. reservations.update().eq()                   — flip to reserved_paid (awaited directly)
-// 4. orders.insert().select().single()            — create order
-// 5. stripe_events.insert()                       — log event (after fulfillment)
+// 4. orders.insert().select().single()            — create order (before unit update)
+// 5. units.update().eq()                          — update unit status (if unitId, non-critical)
+// 6. stripe_events.insert()                       — log event (after fulfillment)
 
 function setupHappyPath(unitId: string | null = null) {
   supabaseAdmin.from.mockReset()
@@ -119,21 +120,21 @@ function setupHappyPath(unitId: string | null = null) {
     .mockReturnValueOnce(makeChain({
       eq: jest.fn().mockResolvedValue({ data: null, error: null }),
     }))
+    // 4. orders insert → select → single
+    .mockReturnValueOnce(makeChain({
+      single: jest.fn().mockResolvedValue({ data: { id: 'order-001' }, error: null }),
+    }))
 
   if (unitId) {
     supabaseAdmin.from
-      // 4. units update — eq is terminal
+      // 5. units update — eq is terminal
       .mockReturnValueOnce(makeChain({
         eq: jest.fn().mockResolvedValue({ data: null, error: null }),
       }))
   }
 
   supabaseAdmin.from
-    // 4 or 5. orders insert → select → single
-    .mockReturnValueOnce(makeChain({
-      single: jest.fn().mockResolvedValue({ data: { id: 'order-001' }, error: null }),
-    }))
-    // 5 or 6. stripe_events insert (log event) — no terminal needed
+    // 6. stripe_events insert (log event) — no terminal needed
     .mockReturnValueOnce(makeChain())
 }
 

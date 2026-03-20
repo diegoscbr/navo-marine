@@ -120,3 +120,89 @@ describe('getPackageProductById', () => {
     expect(result).toBeNull()
   })
 })
+
+describe('checkMultiUnitAvailability', () => {
+  it('returns available when enough atlas2 and tablet units exist', async () => {
+    const calls = [
+      { count: 10, error: null }, // atlas2 total
+      { count: 2, error: null },  // tablet total
+      { count: 0, error: null },  // atlas2 allocated
+    ]
+    let i = 0
+    ;(supabaseAdmin.from as jest.Mock).mockImplementation(() => {
+      const result = calls[i++]
+      return makeChain({ gte: jest.fn().mockResolvedValue(result) })
+    })
+
+    const { checkMultiUnitAvailability } = await import('@/lib/db/packages')
+    const result = await checkMultiUnitAvailability('product-uuid', '2027-06-01', '2027-06-05', 5, true)
+    expect(result.available).toBe(true)
+  })
+
+  it('returns unavailable when not enough atlas2 units', async () => {
+    const calls = [
+      { count: 3, error: null },  // only 3 atlas2 (need 5)
+      { count: 2, error: null },
+      { count: 0, error: null },
+    ]
+    let i = 0
+    ;(supabaseAdmin.from as jest.Mock).mockImplementation(() => {
+      const result = calls[i++]
+      return makeChain({ gte: jest.fn().mockResolvedValue(result) })
+    })
+
+    const { checkMultiUnitAvailability } = await import('@/lib/db/packages')
+    const result = await checkMultiUnitAvailability('product-uuid', '2027-06-01', '2027-06-05', 5, true)
+    expect(result.available).toBe(false)
+    expect(result.reason).toMatch(/atlas 2/i)
+  })
+
+  it('throws if DB returns error on unit count', async () => {
+    ;(supabaseAdmin.from as jest.Mock).mockImplementation(() =>
+      makeChain({ gte: jest.fn().mockResolvedValue({ count: null, error: { message: 'DB error' } }) }),
+    )
+
+    const { checkMultiUnitAvailability } = await import('@/lib/db/packages')
+    await expect(
+      checkMultiUnitAvailability('product-uuid', '2027-06-01', '2027-06-05', 5, true),
+    ).rejects.toThrow('checkMultiUnitAvailability')
+  })
+})
+
+describe('getPackageProduct', () => {
+  it('returns product data when found', async () => {
+    const mockProduct = {
+      id: 'uuid',
+      name: 'Race Committee Package',
+      slug: 'race-committee-package',
+      category: 'regatta_management',
+      price_per_day_cents: 10500,
+      payment_mode: 'capture',
+      min_advance_booking_days: null,
+      atlas2_units_required: 0,
+      tablet_required: true,
+      capacity: 1,
+    }
+    const chain = makeChain({
+      single: jest.fn().mockResolvedValue({ data: mockProduct, error: null }),
+    })
+    ;(supabaseAdmin.from as jest.Mock).mockReturnValue(chain)
+
+    const { getPackageProduct } = await import('@/lib/db/packages')
+    const product = await getPackageProduct('race-committee-package')
+
+    expect(product).toEqual(mockProduct)
+  })
+
+  it('returns null when product not found', async () => {
+    const chain = makeChain({
+      single: jest.fn().mockResolvedValue({ data: null, error: { code: 'PGRST116' } }),
+    })
+    ;(supabaseAdmin.from as jest.Mock).mockReturnValue(chain)
+
+    const { getPackageProduct } = await import('@/lib/db/packages')
+    const product = await getPackageProduct('nonexistent-slug')
+
+    expect(product).toBeNull()
+  })
+})

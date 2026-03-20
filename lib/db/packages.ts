@@ -199,6 +199,7 @@ export async function getPackageProductById(id: string): Promise<PackageProduct 
 
   if (error || !data) return null
   if (data.category !== 'regatta_management') return null
+  if (!data.price_per_day_cents) return null
 
   return data as PackageProduct
 }

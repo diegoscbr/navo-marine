@@ -89,14 +89,14 @@ export function PackageReviewStep({ product, startDate, endDate, onBack }: Props
         <button
           onClick={onBack}
           disabled={loading}
-          className="glass-btn glass-btn-ghost flex-1 rounded-full px-6 py-3 text-sm font-medium disabled:opacity-40"
+          className="glass-btn glass-btn-ghost flex-1 px-6 py-3 text-sm font-medium disabled:opacity-40"
         >
           ← Back
         </button>
         <button
           onClick={handleSubmit}
           disabled={loading}
-          className="glass-btn glass-btn-primary flex-1 rounded-full px-6 py-3 text-sm font-medium disabled:opacity-40"
+          className="glass-btn glass-btn-primary flex-1 px-6 py-3 text-sm font-medium disabled:opacity-40"
         >
           {loading ? 'Processing...' : isHold ? 'Reserve & Hold' : 'Reserve & Pay'}
         </button>

@@ -96,13 +96,13 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
       <button
         type="button"
         disabled
-        className="glass-btn glass-btn-primary mt-6 w-full rounded-full px-6 py-3 text-sm font-medium opacity-60"
+        className="glass-btn glass-btn-primary mt-6 w-full px-6 py-3 text-sm font-medium opacity-60"
       >
         Checkout Coming Soon
       </button>
       <Link
         href="/contact"
-        className="glass-btn glass-btn-ghost mt-3 inline-flex w-full justify-center rounded-full px-6 py-3 text-sm font-medium"
+        className="glass-btn glass-btn-ghost mt-3 inline-flex w-full justify-center px-6 py-3 text-sm font-medium"
       >
         Contact Sales
       </Link>

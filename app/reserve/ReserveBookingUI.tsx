@@ -218,7 +218,7 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
       <button
         onClick={handleSubmit}
         disabled={!canSubmit || loading}
-        className="glass-btn glass-btn-primary mt-8 w-full rounded-full px-6 py-4 text-sm font-medium tracking-wide disabled:opacity-40"
+        className="glass-btn glass-btn-primary mt-8 w-full px-6 py-4 text-sm font-medium tracking-wide disabled:opacity-40"
       >
         {loading ? 'Processing...' : 'Reserve & Pay'}
       </button>

@@ -137,14 +137,14 @@ export function DateRangePicker({ product, onNext, onBack }: Props) {
       <div className="flex gap-4 w-full max-w-sm">
         <button
           onClick={onBack}
-          className="glass-btn glass-btn-ghost flex-1 rounded-full px-6 py-3 text-sm font-medium"
+          className="glass-btn glass-btn-ghost flex-1 px-6 py-3 text-sm font-medium"
         >
           ← Back
         </button>
         <button
           onClick={() => canProceed && onNext(startDate!, endDate!)}
           disabled={!canProceed}
-          className="glass-btn glass-btn-primary flex-1 rounded-full px-6 py-3 text-sm font-medium disabled:opacity-40"
+          className="glass-btn glass-btn-primary flex-1 px-6 py-3 text-sm font-medium disabled:opacity-40"
         >
           Review →
         </button>

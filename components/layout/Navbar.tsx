@@ -81,7 +81,7 @@ export function Navbar() {
             )}
             <button
               onClick={() => signOut({ callbackUrl: '/' })}
-              className="glass-btn glass-btn-ghost inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-medium tracking-wide"
+              className="glass-btn glass-btn-ghost inline-flex items-center justify-center px-6 py-3 text-sm font-medium tracking-wide"
             >
               Sign Out
             </button>

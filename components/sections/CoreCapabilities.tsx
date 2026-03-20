@@ -7,8 +7,8 @@ const capabilities = [
   {
     title: 'Performance Technology',
     description:
-      'Official Vakaros Atlas II integration. Onboard systems optimization, instrumentation configuration, and athlete-level calibration.',
-    items: ['Atlas II Integration', 'Systems Optimization', 'Instrumentation Config', 'Athlete Calibration'],
+      'Official Vakaros Atlas 2 integration. Onboard systems optimization, instrumentation configuration, and athlete-level calibration.',
+    items: ['Atlas 2 Integration', 'Systems Optimization', 'Instrumentation Config', 'Athlete Calibration'],
   },
   {
     title: 'Race Management Services',

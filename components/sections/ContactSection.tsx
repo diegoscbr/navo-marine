@@ -11,14 +11,14 @@ export function ContactSection() {
               Work with NAVO.
             </h2>
             <p className="mt-5 text-lg leading-relaxed text-white/70">
-              We work with competitive sailing teams and race organizers to deploy Atlas II instrumentation, build data infrastructure, and run race management programs.
+              We work with competitive sailing teams and race organizers to deploy Atlas 2 instrumentation, build data infrastructure, and run race management programs.
             </p>
 
             <ul className="mt-8 space-y-4">
               {[
                 { label: 'Who we work with', value: 'Offshore teams, regattas, sailing academies' },
                 { label: 'What to expect', value: 'Response within one business day' },
-                { label: 'Common inquiries', value: 'Atlas II orders, race management, partnerships' },
+                { label: 'Common inquiries', value: 'Atlas 2 orders, race management, partnerships' },
               ].map(({ label, value }) => (
                 <li key={label} className="flex flex-col gap-1">
                   <span className="text-xs uppercase tracking-widest text-white/40">{label}</span>

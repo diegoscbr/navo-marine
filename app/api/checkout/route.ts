@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  const authedSession = { user: session.user } as { user: { id?: string | null; email?: string | null } }
 
   let body: Partial<CheckoutBody>
   try {
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
     }
     const result = await handleRentalEvent(
       { event_id: body.event_id, product_id: body.product_id, sail_number: body.sail_number, extra_days: rawExtraDays },
-      session,
+      authedSession,
       baseUrl,
     )
     return NextResponse.json(result.body, { status: result.status })
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest) {
     }
     const result = await handleRentalCustom(
       { date_window_id: body.date_window_id, product_id: body.product_id, sail_number: body.sail_number, extra_days: rawExtraDaysCustom },
-      session,
+      authedSession,
       baseUrl,
     )
     return NextResponse.json(result.body, { status: result.status })
@@ -97,7 +98,7 @@ export async function POST(req: NextRequest) {
 
     const result = await handleRegattaPackage(
       { product_id: body.product_id, start_date: body.start_date, end_date: body.end_date },
-      session,
+      authedSession,
       baseUrl,
     )
     return NextResponse.json(result.body, { status: result.status })

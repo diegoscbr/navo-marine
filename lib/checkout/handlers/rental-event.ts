@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@/lib/db/client'
 import { stripe } from '@/lib/stripe/client'
-import { getEventProduct } from '@/lib/db/events'
+import { getEventProduct, getEventPricing } from '@/lib/db/events'
 import { checkEventAvailability } from '@/lib/db/availability'
 import { daysBetween } from '@/lib/utils/dates'
 
@@ -30,8 +30,11 @@ export async function handleRentalEvent(
 ): Promise<HandlerResult> {
   const { event_id, product_id, sail_number, extra_days } = input
 
-  // 1. Look up event product
-  const eventProduct = await getEventProduct(event_id, product_id)
+  // 1. Look up event product and event pricing in parallel
+  const [eventProduct, event] = await Promise.all([
+    getEventProduct(event_id, product_id),
+    getEventPricing(event_id),
+  ])
   if (!eventProduct) {
     return { status: 404, body: { error: 'Event product not found' } }
   }
@@ -46,11 +49,11 @@ export async function handleRentalEvent(
   }
 
   // 3. Compute total price
-  // Use per-day pricing if available; fall back to flat rental_price_cents
+  // Use per-day pricing from event if available; fall back to flat rental_price_cents
   let totalCents: number
-  if (eventProduct.rental_price_per_day_cents != null) {
-    const eventDays = daysBetween(eventProduct.start_date, eventProduct.end_date)
-    totalCents = eventProduct.rental_price_per_day_cents * (eventDays + extra_days)
+  if (event?.rental_price_per_day_cents != null) {
+    const eventDays = daysBetween(event.start_date, event.end_date)
+    totalCents = event.rental_price_per_day_cents * (eventDays + extra_days)
   } else {
     totalCents = eventProduct.rental_price_cents
   }

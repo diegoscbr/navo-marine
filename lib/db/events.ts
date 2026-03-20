@@ -73,6 +73,26 @@ export async function listActiveDateWindows(): Promise<DateWindow[]> {
   return data as unknown as DateWindow[]
 }
 
+type EventPricing = {
+  start_date: string
+  end_date: string
+  rental_price_per_day_cents: number | null
+}
+
+export async function getEventPricing(eventId: string): Promise<EventPricing | null> {
+  const { data, error } = await supabaseAdmin
+    .from('rental_events')
+    .select('start_date, end_date, rental_price_per_day_cents')
+    .eq('id', eventId)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return null
+    throw new Error(`getEventPricing: ${error.message}`)
+  }
+  return data as unknown as EventPricing
+}
+
 export async function getEventProduct(
   eventId: string,
   productId: string,

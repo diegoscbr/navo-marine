@@ -30,6 +30,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             Products
           </Link>
           <Link
+            href="/admin/reservations"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+          >
+            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10m5 0a2 2 0 01-2 2H4a2 2 0 01-2-2m16-4a2 2 0 00-2-2H4a2 2 0 00-2 2m16 0v10a2 2 0 01-2 2H4a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2z" />
+            </svg>
+            Reservations
+          </Link>
+          <Link
             href="/admin/fleet"
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white"
           >

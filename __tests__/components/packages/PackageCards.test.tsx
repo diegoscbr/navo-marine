@@ -6,11 +6,13 @@ const makeProduct = (slug: string): PackageProduct => ({
   id: slug,
   slug,
   name: slug,
+  category: 'race-management',
   price_per_day_cents: 10500,
   payment_mode: 'payment',
   min_advance_booking_days: null,
-  stripe_price_id: 'price_test',
-  active: true,
+  atlas2_units_required: 0,
+  tablet_required: false,
+  capacity: 10,
 })
 
 describe('PackageCards', () => {

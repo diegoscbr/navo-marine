@@ -46,7 +46,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
           <button
             type="button"
             onClick={decrement}
-            className="h-10 w-10 rounded-full border border-white/20 text-xl leading-none text-white/80 transition-colors hover:border-white/40 hover:text-white"
+            className="h-11 w-11 rounded-full border border-white/20 text-xl leading-none text-white/80 transition-colors hover:border-white/40 hover:text-white"
             aria-label="Decrease quantity"
           >
             -
@@ -55,7 +55,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
           <button
             type="button"
             onClick={increment}
-            className="h-10 w-10 rounded-full border border-white/20 text-xl leading-none text-white/80 transition-colors hover:border-white/40 hover:text-white"
+            className="h-11 w-11 rounded-full border border-white/20 text-xl leading-none text-white/80 transition-colors hover:border-white/40 hover:text-white"
             aria-label="Increase quantity"
           >
             +
@@ -113,7 +113,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
       </p>
       <p className="mt-2 text-xs text-white/40">
         Need a rental instead?{' '}
-        <Link className="text-marine-400 underline-offset-4 hover:underline" href="/reserve">
+        <Link className="inline-flex py-2 text-marine-400 underline-offset-4 hover:underline" href="/reserve">
           Reserve Atlas 2
         </Link>
         .

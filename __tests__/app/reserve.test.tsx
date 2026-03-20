@@ -1,20 +1,50 @@
 import { render, screen } from '@testing-library/react'
-import ReservePage from '@/app/reserve/page'
+
+jest.mock('@/lib/auth', () => ({ auth: jest.fn() }))
+jest.mock('next/navigation', () => ({ redirect: jest.fn() }))
+jest.mock('@/lib/db/events', () => ({
+  listActiveRentalEvents: jest.fn(),
+  listActiveDateWindows: jest.fn(),
+}))
+jest.mock('@/components/layout/Navbar', () => ({ Navbar: () => <nav /> }))
+jest.mock('@/components/layout/Footer', () => ({ Footer: () => <footer /> }))
+jest.mock('@/app/reserve/ReserveBookingUI', () => ({
+  ReserveBookingUI: () => <div data-testid="reserve-booking-ui" />,
+}))
+
+const { auth } = require('@/lib/auth') as { auth: jest.Mock }
+const { redirect } = require('next/navigation') as { redirect: jest.Mock }
+const { listActiveRentalEvents, listActiveDateWindows } = require('@/lib/db/events') as {
+  listActiveRentalEvents: jest.Mock
+  listActiveDateWindows: jest.Mock
+}
 
 describe('/reserve page', () => {
-  it('renders reservation heading', () => {
-    render(<ReservePage />)
-    expect(screen.getByRole('heading', { name: /reserve vakaros atlas ii units/i })).toBeInTheDocument()
+  beforeEach(() => {
+    listActiveRentalEvents.mockResolvedValue([])
+    listActiveDateWindows.mockResolvedValue([])
   })
 
-  it('renders booking message', () => {
-    render(<ReservePage />)
-    expect(screen.getByText(/book a 30-minute consultation to configure your order and secure your units/i)).toBeInTheDocument()
+  it('redirects to login when unauthenticated', async () => {
+    auth.mockResolvedValueOnce(null)
+    const ReservePage = (await import('@/app/reserve/page')).default
+    await ReservePage()
+    expect(redirect).toHaveBeenCalledWith('/login?callbackUrl=/reserve')
   })
 
-  it('renders Calendly fallback link', () => {
-    render(<ReservePage />)
-    const link = screen.getByRole('link', { name: /open calendly in a new tab/i })
-    expect(link.getAttribute('href')).toMatch(/^https:\/\/calendly\.com\/d\/cx99-3zw-gtb/)
+  it('renders heading when authenticated', async () => {
+    auth.mockResolvedValueOnce({ user: { id: 'u1', email: 'sailor@test.com' } })
+    const ReservePage = (await import('@/app/reserve/page')).default
+    const jsx = await ReservePage()
+    render(jsx as React.ReactElement)
+    expect(screen.getByRole('heading', { name: /reserve vakaros atlas ii/i })).toBeInTheDocument()
+  })
+
+  it('renders ReserveBookingUI when authenticated', async () => {
+    auth.mockResolvedValueOnce({ user: { id: 'u1', email: 'sailor@test.com' } })
+    const ReservePage = (await import('@/app/reserve/page')).default
+    const jsx = await ReservePage()
+    render(jsx as React.ReactElement)
+    expect(screen.getByTestId('reserve-booking-ui')).toBeInTheDocument()
   })
 })

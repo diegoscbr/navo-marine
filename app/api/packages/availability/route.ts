@@ -1,0 +1,43 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+import { checkPackageAvailability } from '@/lib/db/packages'
+import { supabaseAdmin } from '@/lib/db/client'
+
+export async function GET(req: NextRequest) {
+  const session = await auth()
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { searchParams } = req.nextUrl
+  const productId = searchParams.get('product_id')
+  const startDate = searchParams.get('start_date')
+  const endDate = searchParams.get('end_date')
+
+  if (!productId || !startDate || !endDate) {
+    return NextResponse.json({ error: 'product_id, start_date, end_date are required' }, { status: 400 })
+  }
+
+  const { data: product } = await supabaseAdmin
+    .from('products')
+    .select('capacity')
+    .eq('id', productId)
+    .single()
+
+  if (!product) {
+    return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+  }
+
+  try {
+    const result = await checkPackageAvailability(
+      productId,
+      startDate,
+      endDate,
+      (product as { capacity: number }).capacity,
+    )
+    return NextResponse.json(result)
+  } catch (err) {
+    console.error('[api/packages/availability] error:', err)
+    return NextResponse.json({ error: 'Availability check failed' }, { status: 503 })
+  }
+}

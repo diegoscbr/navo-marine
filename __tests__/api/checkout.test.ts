@@ -19,6 +19,7 @@ jest.mock('@/lib/stripe/client', () => ({
 jest.mock('@/lib/db/events', () => ({
   getEventProduct: jest.fn(),
   getDateWindowProduct: jest.fn(),
+  getEventPricing: jest.fn(),
 }))
 jest.mock('@/lib/db/availability', () => ({
   checkEventAvailability: jest.fn(),
@@ -32,9 +33,10 @@ const { supabaseAdmin } = require('@/lib/db/client') as {
 const { stripe } = require('@/lib/stripe/client') as {
   stripe: { checkout: { sessions: { create: jest.Mock } } }
 }
-const { getEventProduct, getDateWindowProduct } = require('@/lib/db/events') as {
+const { getEventProduct, getDateWindowProduct, getEventPricing } = require('@/lib/db/events') as {
   getEventProduct: jest.Mock
   getDateWindowProduct: jest.Mock
+  getEventPricing: jest.Mock
 }
 const { checkEventAvailability, checkWindowAvailability } = require('@/lib/db/availability') as {
   checkEventAvailability: jest.Mock

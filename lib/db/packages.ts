@@ -62,10 +62,11 @@ export async function checkPackageAvailability(
  * Check that enough physical Atlas 2 and tablet units exist for a multi-unit
  * regatta package over the requested date range.
  *
- * Makes 3 count queries, each terminating with `.gte()`:
+ * Makes 4 count queries, each terminating with `.gte()`:
  *   1. Total available Atlas 2 units in the fleet
  *   2. Total available tablet units in the fleet
  *   3. Atlas 2 units already allocated for the date range
+ *   4. Tablet units already allocated for the date range (only if tabletRequired)
  */
 export async function checkMultiUnitAvailability(
   _productId: string,
@@ -95,6 +96,9 @@ export async function checkMultiUnitAvailability(
   if (tabErr) throw new Error(`checkMultiUnitAvailability: ${tabErr.message}`)
 
   // 3. Atlas 2 units already allocated for overlapping date range
+  // NOTE: This query does not filter by reservation status. To prevent cancelled reservations
+  // from blocking availability, reservation_units rows must be deleted when a reservation
+  // is cancelled. Tracked in TODOS.md Phase 5 cleanup.
   const { count: atlas2Allocated, error: allocErr } = await supabaseAdmin
     .from('reservation_units')
     .select('id', { count: 'exact', head: true })
@@ -113,8 +117,23 @@ export async function checkMultiUnitAvailability(
     }
   }
 
+  // 4. Tablet units already allocated for overlapping date range (only if needed)
+  // NOTE: Same cancellation gap as query 3 above — reservation_units rows must be
+  // deleted on cancellation to avoid false unavailability.
+  let tabletAllocated = 0
   if (tabletRequired) {
-    const tabletsAvailable = tabletTotal ?? 0
+    const { count: tabAlloc, error: tabAllocErr } = await supabaseAdmin
+      .from('reservation_units')
+      .select('id', { count: 'exact', head: true })
+      .eq('unit_type', 'tablet')
+      .lte('start_date', endDate)
+      .gte('end_date', startDate)
+    if (tabAllocErr) throw new Error(`checkMultiUnitAvailability: ${tabAllocErr.message}`)
+    tabletAllocated = tabAlloc ?? 0
+  }
+
+  if (tabletRequired) {
+    const tabletsAvailable = (tabletTotal ?? 0) - tabletAllocated
     if (tabletsAvailable < 1) {
       return { available: false, reason: 'No tablet units available for selected dates' }
     }
@@ -232,5 +251,5 @@ export async function listPackageProducts(): Promise<PackageProduct[]> {
 
   if (error) throw new Error(`listPackageProducts: ${error.message}`)
 
-  return (data ?? []) as PackageProduct[]
+  return (data ?? []).filter(p => p.price_per_day_cents != null) as PackageProduct[]
 }

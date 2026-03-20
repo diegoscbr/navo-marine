@@ -127,6 +127,7 @@ describe('checkMultiUnitAvailability', () => {
       { count: 10, error: null }, // atlas2 total
       { count: 2, error: null },  // tablet total
       { count: 0, error: null },  // atlas2 allocated
+      { count: 0, error: null },  // tablet allocated
     ]
     let i = 0
     ;(supabaseAdmin.from as jest.Mock).mockImplementation(() => {

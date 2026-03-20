@@ -1,23 +1,24 @@
 import type { PackageProduct } from '@/lib/db/packages'
+import Image from 'next/image'
 
 type Props = {
   products: PackageProduct[]
   onSelect: (product: PackageProduct) => void
 }
 
-const PACKAGE_META: Record<string, { icon: string; description: string; equipment: string[] }> = {
+const PACKAGE_META: Record<string, { image: string; description: string; equipment: string[] }> = {
   'race-committee-package': {
-    icon: '🚩',
+    image: '/racecomittee.jpg',
     description: 'Essential tablet tools for race committee operations at any regatta.',
     equipment: ['1× Committee Tablet'],
   },
   'rc-wl-course-package': {
-    icon: '⛵',
+    image: '/windward-leeward.jpg',
     description: 'Full Atlas 2 fleet deployment for windward-leeward course management.',
     equipment: ['5× Atlas 2 Units', '1× Committee Tablet'],
   },
   'racesense-management-services': {
-    icon: '🧭',
+    image: '/racemanagement.jpg',
     description: 'Human-led race orchestration with full data platform. Expenses invoiced separately.',
     equipment: ['Dedicated Race Director', 'Full Data Platform'],
   },
@@ -27,7 +28,7 @@ export function PackageCards({ products, onSelect }: Props) {
   return (
     <div className="grid gap-6 md:grid-cols-3">
       {products.map((product) => {
-        const meta = PACKAGE_META[product.slug] ?? { icon: '📦', description: '', equipment: [] }
+        const meta = PACKAGE_META[product.slug] ?? { image: '', description: '', equipment: [] }
         const isHold = product.payment_mode === 'hold'
 
         return (
@@ -36,7 +37,12 @@ export function PackageCards({ products, onSelect }: Props) {
             onClick={() => onSelect(product)}
             className="group text-left rounded-xl border border-white/10 bg-white/5 p-6 hover:border-marine-500/50 hover:bg-white/8 transition-all"
           >
-            <div className="text-3xl mb-3">{meta.icon}</div>
+            {meta.image && (
+              <div className="relative h-40 w-full overflow-hidden rounded-t-xl -mx-6 -mt-6 mb-6">
+                <Image src={meta.image} alt={product.name} fill className="object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-navy-900 via-navy-900/60 to-transparent" />
+              </div>
+            )}
             <h3 className="font-heading text-lg font-semibold text-white mb-1">{product.name}</h3>
 
             {product.min_advance_booking_days && (

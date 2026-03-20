@@ -28,6 +28,13 @@ describe('Navbar', () => {
     expect(link).toHaveAttribute('href', '/contact')
   })
 
+  it('renders a Packages link', () => {
+    render(<Navbar />)
+    const packagesLink = screen.getByRole('link', { name: /packages/i })
+    expect(packagesLink).toBeInTheDocument()
+    expect(packagesLink).toHaveAttribute('href', '/packages')
+  })
+
   it('renders Reserve nav link pointing to /reserve', () => {
     render(<Navbar />)
     const link = screen.getByRole('link', { name: /^reserve$/i })

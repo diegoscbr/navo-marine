@@ -13,7 +13,7 @@ export default async function LoginPage() {
   const session = await auth()
 
   if (session) {
-    redirect('/dashboard')
+    redirect(session.user?.email?.endsWith('@navomarine.com') ? '/admin' : '/')
   }
 
   return (

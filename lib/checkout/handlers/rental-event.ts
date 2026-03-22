@@ -49,11 +49,11 @@ export async function handleRentalEvent(
   }
 
   // 3. Compute total price
-  // Use per-day pricing from event if available; fall back to flat rental_price_cents
+  // Use per-day pricing from eventProduct if available; fall back to flat rental_price_cents
   let totalCents: number
-  if (event?.rental_price_per_day_cents != null) {
+  if (eventProduct.rental_price_per_day_cents != null && event != null) {
     const eventDays = daysBetween(event.start_date, event.end_date)
-    totalCents = event.rental_price_per_day_cents * (eventDays + extra_days)
+    totalCents = eventProduct.rental_price_per_day_cents * (eventDays + extra_days)
   } else {
     totalCents = eventProduct.rental_price_cents
   }

@@ -1,0 +1,5 @@
+{"type":"server-started","port":50316,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:50316","screen_dir":"/Users/diegoescobar/Workshop/navo-marine/.superpowers/brainstorm/98374-1774036634"}
+{"type":"screen-added","file":"/Users/diegoescobar/Workshop/navo-marine/.superpowers/brainstorm/98374-1774036634/button-styles.html"}
+{"type":"screen-added","file":"/Users/diegoescobar/Workshop/navo-marine/.superpowers/brainstorm/98374-1774036634/card-image-layout.html"}
+{"type":"screen-added","file":"/Users/diegoescobar/Workshop/navo-marine/.superpowers/brainstorm/98374-1774036634/waiting.html"}
+{"type":"server-stopped","reason":"idle timeout"}

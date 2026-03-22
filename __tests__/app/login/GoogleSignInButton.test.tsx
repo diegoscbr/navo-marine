@@ -12,12 +12,12 @@ describe('GoogleSignInButton', () => {
     expect(screen.getByRole('button', { name: /sign in with google/i })).toBeInTheDocument()
   })
 
-  it('calls signIn with google provider and /dashboard callback on click', () => {
+  it('calls signIn with google provider and /auth/redirect callback on click', () => {
     render(<GoogleSignInButton />)
     fireEvent.click(screen.getByRole('button', { name: /sign in with google/i }))
     expect(signIn).toHaveBeenCalledWith(
       'google',
-      { callbackUrl: '/dashboard' },
+      { callbackUrl: '/auth/redirect' },
       { prompt: 'select_account' }
     )
   })

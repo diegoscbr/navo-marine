@@ -19,6 +19,7 @@ export function ContactSection() {
                 { label: 'Who we work with', value: 'Offshore teams, regattas, sailing academies' },
                 { label: 'What to expect', value: 'Response within one business day' },
                 { label: 'Common inquiries', value: 'Atlas 2 orders, race management, partnerships' },
+                { label: 'Phone', value: '619-288-9746' },
               ].map(({ label, value }) => (
                 <li key={label} className="flex flex-col gap-1">
                   <span className="text-xs uppercase tracking-widest text-white/40">{label}</span>

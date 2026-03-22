@@ -1,11 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import type { RentalEvent, DateWindow } from '@/lib/db/events'
 import { daysBetween } from '@/lib/utils/dates'
-
-type Tab = 'event' | 'custom'
 
 type Props = {
   events: RentalEvent[]
@@ -17,9 +16,8 @@ const DEFAULT_PRICE_PER_DAY_CENTS = 3500
 
 export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
   const { data: session } = useSession()
-  const [activeTab, setActiveTab] = useState<Tab>('event')
+  const [activeTab, setActiveTab] = useState<'event' | 'custom'>('event')
   const [selectedEventId, setSelectedEventId] = useState('')
-  const [selectedWindowId, setSelectedWindowId] = useState('')
   const [sailNumber, setSailNumber] = useState('')
   const [extraDays, setExtraDays] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -39,7 +37,7 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
   const selectedEvent = events.find((e) => e.id === selectedEventId)
   const eventProduct = selectedEvent?.rental_event_products?.[0]
 
-  const pricePerDay = selectedEvent?.rental_price_per_day_cents ?? DEFAULT_PRICE_PER_DAY_CENTS
+  const pricePerDay = eventProduct?.rental_price_per_day_cents ?? DEFAULT_PRICE_PER_DAY_CENTS
   const eventDays = selectedEvent
     ? daysBetween(selectedEvent.start_date, selectedEvent.end_date)
     : 0
@@ -54,20 +52,12 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
     setError(null)
     setLoading(true)
     try {
-      const body =
-        activeTab === 'event'
-          ? {
+      const body = {
               reservation_type: 'rental_event' as const,
               product_id: defaultProductId,
               event_id: selectedEventId,
               sail_number: sailNumber,
               extra_days: extraDays,
-            }
-          : {
-              reservation_type: 'rental_custom' as const,
-              product_id: defaultProductId,
-              date_window_id: selectedWindowId,
-              sail_number: sailNumber,
             }
 
       const res = await fetch('/api/checkout', {
@@ -91,9 +81,7 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
     }
   }
 
-  const canSubmit =
-    sailNumber.trim().length > 0 &&
-    (activeTab === 'event' ? !!selectedEventId : !!selectedWindowId)
+  const canSubmit = sailNumber.trim().length > 0 && !!selectedEventId
 
   return (
     <div className="w-full max-w-2xl">
@@ -120,6 +108,23 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
           Custom Dates
         </button>
       </div>
+
+      {/* Custom Dates — contact us */}
+      {activeTab === 'custom' && (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center">
+          <p className="text-white/80 font-medium">Need custom dates?</p>
+          <p className="mt-2 text-sm text-white/50">
+            Custom rentals are handled as direct invoices. Reach out and we&apos;ll set everything up for you.
+          </p>
+          <Link
+            href="/contact"
+            className="glass-btn glass-btn-primary mt-6 inline-flex px-8 py-3 text-sm font-medium"
+          >
+            Contact Us
+          </Link>
+          <p className="mt-4 text-xs text-white/30">619-288-9746 · info@navomarine.com</p>
+        </div>
+      )}
 
       {/* Event Tab */}
       {activeTab === 'event' && (
@@ -178,50 +183,33 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
         </div>
       )}
 
-      {/* Custom Dates Tab */}
-      {activeTab === 'custom' && (
-        <div className="space-y-6">
-          <label className="block">
-            <span className="text-sm text-white/60 mb-2 block">Select Date Window</span>
-            <select
-              value={selectedWindowId}
-              onChange={(e) => setSelectedWindowId(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white"
-            >
-              <option value="">Choose a date window...</option>
-              {windows.map((win) => (
-                <option key={win.id} value={win.id}>
-                  {win.label ?? 'Custom'} ({win.start_date} to {win.end_date})
-                </option>
-              ))}
-            </select>
+      {/* Sail Number and submit — only shown on event tab */}
+      {activeTab === 'event' && (
+        <>
+          <label className="block mt-6">
+            <span className="text-sm text-white/60 mb-2 block">Sail Number</span>
+            <input
+              type="text"
+              value={sailNumber}
+              onChange={(e) => setSailNumber(e.target.value)}
+              placeholder="Sail number (e.g., USA-12345)"
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30"
+            />
           </label>
-        </div>
+
+          {error && (
+            <p className="mt-4 text-sm text-red-400">{error}</p>
+          )}
+
+          <button
+            onClick={handleSubmit}
+            disabled={!canSubmit || loading}
+            className="glass-btn glass-btn-primary mt-8 w-full px-6 py-4 text-sm font-medium tracking-wide disabled:opacity-40"
+          >
+            {loading ? 'Processing...' : 'Reserve & Pay'}
+          </button>
+        </>
       )}
-
-      {/* Sail Number — shared between both tabs */}
-      <label className="block mt-6">
-        <span className="text-sm text-white/60 mb-2 block">Sail Number</span>
-        <input
-          type="text"
-          value={sailNumber}
-          onChange={(e) => setSailNumber(e.target.value)}
-          placeholder="Sail number (e.g., USA-12345)"
-          className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30"
-        />
-      </label>
-
-      {error && (
-        <p className="mt-4 text-sm text-red-400">{error}</p>
-      )}
-
-      <button
-        onClick={handleSubmit}
-        disabled={!canSubmit || loading}
-        className="glass-btn glass-btn-primary mt-8 w-full px-6 py-4 text-sm font-medium tracking-wide disabled:opacity-40"
-      >
-        {loading ? 'Processing...' : 'Reserve & Pay'}
-      </button>
     </div>
   )
 }

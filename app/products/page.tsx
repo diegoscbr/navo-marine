@@ -35,7 +35,7 @@ export default async function ProductsPage() {
               <p className="mt-2 text-sm text-white/70">{product.descriptionShort}</p>
               <p className="mt-4 text-lg font-medium text-white">{formatUSD(product.pricing.amountCents)}</p>
               <Link
-                href={`/products/${product.slug}`}
+                href={product.slug === 'atlas-2' ? `/products/${product.slug}` : '/packages'}
                 className="mt-6 inline-flex rounded-full border border-white/20 px-5 py-2.5 text-sm text-white/85 transition-colors hover:border-white/40 hover:text-white"
               >
                 View Product

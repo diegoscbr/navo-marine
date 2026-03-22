@@ -44,8 +44,8 @@ export async function listActiveRentalEvents(): Promise<RentalEvent[]> {
     .select(`
       id, name, location, event_url, start_date, end_date,
       rental_event_products (
-        product_id, rental_price_cents, late_fee_cents,
-        reserve_cutoff_days, capacity, inventory_status
+        product_id, rental_price_cents, rental_price_per_day_cents,
+        late_fee_cents, reserve_cutoff_days, capacity, inventory_status
       )
     `)
     .eq('active', true)
@@ -76,13 +76,12 @@ export async function listActiveDateWindows(): Promise<DateWindow[]> {
 type EventPricing = {
   start_date: string
   end_date: string
-  rental_price_per_day_cents: number | null
 }
 
 export async function getEventPricing(eventId: string): Promise<EventPricing | null> {
   const { data, error } = await supabaseAdmin
     .from('rental_events')
-    .select('start_date, end_date, rental_price_per_day_cents')
+    .select('start_date, end_date')
     .eq('id', eventId)
     .single()
 

@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Session Resume
+
+**Read this first:** `docs/context/current-state.md` — current implementation status, active blockers, and agreed next steps. Updated each session.
+
 ## Commands
 
 ```bash

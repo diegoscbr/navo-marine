@@ -39,6 +39,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             Reservations
           </Link>
           <Link
+            href="/admin/events"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+          >
+            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
+            </svg>
+            Events
+          </Link>
+          <Link
             href="/admin/fleet"
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white"
           >
@@ -51,7 +60,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
         <div className="border-t border-white/10 px-4 py-4">
           <p className="truncate text-xs text-white/30">{session?.user?.email}</p>
-          <Link href="/dashboard" className="mt-1 block text-xs text-white/40 hover:text-white/70">
+          <Link href="/" className="mt-1 block text-xs text-white/40 hover:text-white/70">
             ← Back to site
           </Link>
         </div>

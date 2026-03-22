@@ -5,7 +5,7 @@ describe('AuthorityStrip', () => {
   it('renders Vakaros partnership credential', () => {
     render(<AuthorityStrip />)
     expect(screen.getByText('OFFICIAL BRAND PARTNER')).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: /vakaros atlas ii/i })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /vakaros atlas 2/i })).toBeInTheDocument()
   })
 
   it('renders UR SAILING partnership credential', () => {

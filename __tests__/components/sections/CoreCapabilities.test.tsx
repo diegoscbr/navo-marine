@@ -18,7 +18,7 @@ describe('CoreCapabilities', () => {
 
   it('renders capability descriptions', () => {
     render(<CoreCapabilities />)
-    expect(screen.getByText(/vakaros atlas ii/i)).toBeInTheDocument()
+    expect(screen.getByText(/vakaros atlas 2/i)).toBeInTheDocument()
     expect(screen.getByText(/end-to-end regatta/i)).toBeInTheDocument()
     expect(screen.getAllByText(/post-race analytics/i).length).toBeGreaterThan(0)
   })

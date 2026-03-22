@@ -37,7 +37,7 @@ describe('/reserve page', () => {
     const ReservePage = (await import('@/app/reserve/page')).default
     const jsx = await ReservePage()
     render(jsx as React.ReactElement)
-    expect(screen.getByRole('heading', { name: /reserve vakaros atlas ii/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /reserve vakaros atlas 2/i })).toBeInTheDocument()
   })
 
   it('renders ReserveBookingUI when authenticated', async () => {

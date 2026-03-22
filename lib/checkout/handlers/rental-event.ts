@@ -86,7 +86,7 @@ export async function handleRentalEvent(
         customer_email: session.user.email ?? '',
       },
       customer_email: session.user.email ?? undefined,
-      success_url: `${baseUrl}/dashboard?checkout=success`,
+      success_url: `${baseUrl}/checkout/success`,
       cancel_url: `${baseUrl}/reserve?checkout=cancelled`,
     })
   } catch (err) {

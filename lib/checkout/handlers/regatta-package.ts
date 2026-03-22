@@ -151,7 +151,7 @@ export async function handleRegattaPackage(
         customer_email: session.user.email ?? '',
       },
       customer_email: session.user.email ?? undefined,
-      success_url: `${baseUrl}/dashboard?checkout=success`,
+      success_url: `${baseUrl}/checkout/success`,
       cancel_url: `${baseUrl}/packages?checkout=cancelled`,
     })
   } catch (err) {

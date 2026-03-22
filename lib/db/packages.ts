@@ -75,13 +75,13 @@ export async function checkMultiUnitAvailability(
   atlas2Required: number,
   tabletRequired: boolean,
 ): Promise<{ available: boolean; reason?: string }> {
-  // 1. Total Atlas 2 units in fleet (gte on created_at as always-true sentinel)
+  // 1. Total Atlas 2 units in fleet (gte on added_at as always-true sentinel)
   const { count: atlas2Total, error: a2Err } = await supabaseAdmin
     .from('units')
     .select('id', { count: 'exact', head: true })
     .eq('unit_type', 'atlas2')
     .eq('status', 'available')
-    .gte('created_at', '1970-01-01T00:00:00Z')
+    .gte('added_at', '1970-01-01T00:00:00Z')
 
   if (a2Err) throw new Error(`checkMultiUnitAvailability: ${a2Err.message}`)
 
@@ -91,7 +91,7 @@ export async function checkMultiUnitAvailability(
     .select('id', { count: 'exact', head: true })
     .eq('unit_type', 'tablet')
     .eq('status', 'available')
-    .gte('created_at', '1970-01-01T00:00:00Z')
+    .gte('added_at', '1970-01-01T00:00:00Z')
 
   if (tabErr) throw new Error(`checkMultiUnitAvailability: ${tabErr.message}`)
 

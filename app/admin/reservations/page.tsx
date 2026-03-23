@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { supabaseAdmin } from '@/lib/db/client'
 import { AssignUnitDropdown } from './AssignUnitDropdown'
+import { PackageUnitAssignment } from './PackageUnitAssignment'
+import { availableUnitsForReservation } from '@/lib/admin/unit-availability'
 
 export const metadata: Metadata = {
   title: 'Reservations | NAVO Admin',
@@ -10,15 +12,18 @@ type Reservation = {
   id: string
   customer_email: string
   status: string
+  reservation_type: string
   start_date: string | null
   end_date: string | null
   total_cents: number
   created_at: string
   unit_id: string | null
-  products: { name: string } | null
+  products: { name: string; tablet_required: boolean; atlas2_units_required: number } | null
 }
 
-type Unit = { id: string; serial_number: string; status: string }
+type Unit = { id: string; navo_number: string; status: string; unit_type: string }
+
+type ReservationUnit = { reservation_id: string; unit_type: 'tablet' | 'atlas2'; unit_id: string | null }
 
 const STATUS_STYLES: Record<string, string> = {
   reserved_unpaid: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
@@ -38,14 +43,15 @@ function statusBadge(status: string): string {
 export default async function AdminReservationsPage() {
   const { data: reservations, error } = await supabaseAdmin
     .from('reservations')
-    .select('id, customer_email, status, start_date, end_date, total_cents, created_at, unit_id, products(name)')
+    .select('id, customer_email, status, reservation_type, start_date, end_date, total_cents, created_at, unit_id, products(name, tablet_required, atlas2_units_required)')
     .order('created_at', { ascending: false })
     .limit(100)
 
   const { data: units } = await supabaseAdmin
     .from('units')
-    .select('id, serial_number, status')
-    .order('serial_number')
+    .select('id, navo_number, status, unit_type')
+    .is('retired_at', null)
+    .order('navo_number')
 
   if (error) {
     return (
@@ -57,6 +63,27 @@ export default async function AdminReservationsPage() {
 
   const rows = (reservations ?? []) as unknown as Reservation[]
   const unitList = (units ?? []) as Unit[]
+
+  // Fetch reservation_units for package assignment display
+  const reservationIds = rows.map((r) => r.id)
+  const { data: reservationUnitsData } = reservationIds.length > 0
+    ? await supabaseAdmin
+        .from('reservation_units')
+        .select('reservation_id, unit_type, unit_id')
+        .in('reservation_id', reservationIds)
+    : { data: [] }
+
+  const reservationUnits = (reservationUnitsData ?? []) as ReservationUnit[]
+
+  function availableUnitsFor(reservationId: string, currentUnitId: string | null) {
+    return availableUnitsForReservation(
+      unitList,
+      rows.map((r) => ({ id: r.id, unit_id: r.unit_id, status: r.status })),
+      reservationId,
+      currentUnitId,
+      reservationUnits.map((ru) => ({ reservation_id: ru.reservation_id, unit_id: ru.unit_id })),
+    )
+  }
 
   // Count by status
   const statusCounts = rows.reduce<Record<string, number>>((acc, r) => {
@@ -108,33 +135,53 @@ export default async function AdminReservationsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {rows.map((r) => (
-                <tr key={r.id} className="bg-white/[0.02] transition-colors hover:bg-white/5">
-                  <td className="px-5 py-3 text-white/70">{r.customer_email}</td>
-                  <td className="px-5 py-3 text-white/60">{r.products?.name ?? '—'}</td>
-                  <td className="px-5 py-3">
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium border ${STATUS_STYLES[r.status] ?? 'bg-white/10 text-white/50 border-white/10'}`}
-                    >
-                      {statusBadge(r.status)}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-white/50 text-xs">
-                    {r.start_date && r.end_date ? `${r.start_date} → ${r.end_date}` : '—'}
-                  </td>
-                  <td className="px-5 py-3 text-white/70">${(r.total_cents / 100).toFixed(2)}</td>
-                  <td className="px-5 py-3">
-                    <AssignUnitDropdown
-                      reservationId={r.id}
-                      currentUnitId={r.unit_id}
-                      units={unitList}
-                    />
-                  </td>
-                  <td className="px-5 py-3 text-white/40 text-xs">
-                    {new Date(r.created_at).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
+              {rows.map((r) => {
+                const isPackage =
+                  r.reservation_type === 'regatta_package' &&
+                  (r.products?.tablet_required || (r.products?.atlas2_units_required ?? 0) > 0)
+
+                const currentAssignments = reservationUnits
+                  .filter((ru) => ru.reservation_id === r.id && ru.unit_id)
+                  .map((ru) => ({ unit_type: ru.unit_type, unit_id: ru.unit_id }))
+
+                return (
+                  <tr key={r.id} className="bg-white/[0.02] transition-colors hover:bg-white/5">
+                    <td className="px-5 py-3 text-white/70">{r.customer_email}</td>
+                    <td className="px-5 py-3 text-white/60">{r.products?.name ?? '—'}</td>
+                    <td className="px-5 py-3">
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium border ${STATUS_STYLES[r.status] ?? 'bg-white/10 text-white/50 border-white/10'}`}
+                      >
+                        {statusBadge(r.status)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-white/50 text-xs">
+                      {r.start_date && r.end_date ? `${r.start_date} → ${r.end_date}` : '—'}
+                    </td>
+                    <td className="px-5 py-3 text-white/70">${(r.total_cents / 100).toFixed(2)}</td>
+                    <td className="px-5 py-3">
+                      {isPackage ? (
+                        <PackageUnitAssignment
+                          reservationId={r.id}
+                          tabletUnits={r.products?.tablet_required ? unitList.filter((u) => u.unit_type === 'tablet') : []}
+                          atlas2Units={(r.products?.atlas2_units_required ?? 0) > 0 ? unitList.filter((u) => u.unit_type === 'atlas2') : []}
+                          atlas2Count={r.products?.atlas2_units_required ?? 0}
+                          currentAssignments={currentAssignments}
+                        />
+                      ) : (
+                        <AssignUnitDropdown
+                          reservationId={r.id}
+                          currentUnitId={r.unit_id}
+                          units={availableUnitsFor(r.id, r.unit_id)}
+                        />
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-white/40 text-xs">
+                      {new Date(r.created_at).toLocaleDateString()}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

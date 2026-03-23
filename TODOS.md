@@ -18,6 +18,12 @@
 
 ## P2 — Important (address before launch)
 
+### [P2] Admin KPI dashboard
+**What:** Replace `/admin` redirect with a server component showing: total revenue (sum of `total_cents` on `reserved_paid` + `completed`), active bookings count, fleet utilization %, and last 5 reservations.
+**Why:** Admin currently lands on the reservations list with no high-level signal. Revenue is only visible in the Stripe dashboard. As bookings grow, operators need a glanceable overview without logging into Stripe.
+**How to apply:** Create `app/admin/AdminKPICards.tsx` (async server component, fetches from `supabaseAdmin`). Replace `app/admin/page.tsx` redirect with the KPI page. Watch the `.limit()` cap — use a proper revenue aggregation query (Supabase RPC or remove the limit and use server-side aggregation) instead of fetching all rows in JS. Fleet utilization should be computed from active reservations with assigned units, not from `unit.status` (which may not be kept in sync with reservation assignments).
+**Effort:** S (human: ~2h) → ~15 min CC | **Priority:** P2 | **Blocked by:** nothing
+
 ### [P2] Order number generation strategy
 **What:** Pick and implement a non-sequential, human-readable order number format (e.g., `NM-20260316-A3K7` — date prefix + 4 random alphanumeric chars) and add a Postgres function or application-layer generator.
 **Why:** Sequential integers (1, 2, 3) leak business volume and are guessable. Customers calling support need a short, readable reference — not a UUID.

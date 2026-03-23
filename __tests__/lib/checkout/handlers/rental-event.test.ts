@@ -34,7 +34,7 @@ const mockGetEventPricing = getEventPricing as jest.Mock
 const mockCheckAvailability = checkEventAvailability as jest.Mock
 const mockStripeCreate = stripe.checkout.sessions.create as jest.Mock
 
-const mockEventPricing = { start_date: '2026-04-01', end_date: '2026-04-03' }
+const mockEventPricing = { start_date: '2026-04-01', end_date: '2026-04-03', rental_price_per_day_cents: 3500 }
 
 describe('handleRentalEvent', () => {
   const mockSession = { user: { id: 'user-1', email: 'test@example.com' } }

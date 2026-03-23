@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { supabaseAdmin } from '@/lib/db/client'
+import { AssignUnitDropdown } from './AssignUnitDropdown'
 
 export const metadata: Metadata = {
   title: 'Reservations | NAVO Admin',
@@ -13,8 +14,11 @@ type Reservation = {
   end_date: string | null
   total_cents: number
   created_at: string
+  unit_id: string | null
   products: { name: string } | null
 }
+
+type Unit = { id: string; serial_number: string; status: string }
 
 const STATUS_STYLES: Record<string, string> = {
   reserved_unpaid: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
@@ -34,9 +38,14 @@ function statusBadge(status: string): string {
 export default async function AdminReservationsPage() {
   const { data: reservations, error } = await supabaseAdmin
     .from('reservations')
-    .select('id, customer_email, status, start_date, end_date, total_cents, created_at, products(name)')
+    .select('id, customer_email, status, start_date, end_date, total_cents, created_at, unit_id, products(name)')
     .order('created_at', { ascending: false })
     .limit(100)
+
+  const { data: units } = await supabaseAdmin
+    .from('units')
+    .select('id, serial_number, status')
+    .order('serial_number')
 
   if (error) {
     return (
@@ -47,6 +56,7 @@ export default async function AdminReservationsPage() {
   }
 
   const rows = (reservations ?? []) as unknown as Reservation[]
+  const unitList = (units ?? []) as Unit[]
 
   // Count by status
   const statusCounts = rows.reduce<Record<string, number>>((acc, r) => {
@@ -93,6 +103,7 @@ export default async function AdminReservationsPage() {
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3">Dates</th>
                 <th className="px-5 py-3">Total</th>
+                <th className="px-5 py-3">Unit</th>
                 <th className="px-5 py-3">Created</th>
               </tr>
             </thead>
@@ -112,6 +123,13 @@ export default async function AdminReservationsPage() {
                     {r.start_date && r.end_date ? `${r.start_date} → ${r.end_date}` : '—'}
                   </td>
                   <td className="px-5 py-3 text-white/70">${(r.total_cents / 100).toFixed(2)}</td>
+                  <td className="px-5 py-3">
+                    <AssignUnitDropdown
+                      reservationId={r.id}
+                      currentUnitId={r.unit_id}
+                      units={unitList}
+                    />
+                  </td>
                   <td className="px-5 py-3 text-white/40 text-xs">
                     {new Date(r.created_at).toLocaleDateString()}
                   </td>

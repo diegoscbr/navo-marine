@@ -1,7 +1,7 @@
 # Current State — Resume Context
 
 > **For Claude:** Read this file at the start of any session to get full project context without re-explanation.
-> Last updated: 2026-03-23 (session 5)
+> Last updated: 2026-03-23 (session 6)
 
 ---
 
@@ -10,9 +10,9 @@
 **Active branch:** `dev` (staging on Vercel)
 **Main is prod.** All feature work merges to `dev`, then `dev` → `main` when ready to ship.
 
-**227 unit tests passing.** Build is green.
+**254 unit tests passing.** Build is green.
 
-All Track A code blockers are **complete**. Staging E2E pass is the only remaining gate before `dev` → `main`.
+PR open: `dev` → `main`. Gates before merging: Track B (Gmail env vars) + staging E2E pass.
 
 ---
 
@@ -156,7 +156,9 @@ Email code is fully built and wired. It silently no-ops until these env vars are
 - Confirmed email arrives after completing Stripe checkout (`4242 4242 4242 4242`)
 
 ### Final step
-After staging E2E passes: PR `dev` → `main`, use `/ship` skill.
+1. Complete Track B (Gmail env vars on Vercel)
+2. Staging E2E pass (manual smoke test on dev.navomarine.com)
+3. Merge PR `dev` → `main` (already open)
 
 ---
 

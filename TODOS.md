@@ -2,11 +2,8 @@
 
 ## P1 — Critical (do before or during implementation)
 
-### [P1] Mandatory auth guard pattern in CLAUDE.md
-**What:** Document that every new API route must call `requireAuth()` or `requireAdmin()` before any Supabase query. Add a code review checklist item.
-**Why:** The spec removes Supabase RLS entirely (NextAuth incompatibility with `auth.uid()`). The service role key bypasses all DB policies. If any API route skips the session check, the entire database is exposed with no fallback. This is a conscious tradeoff — not an oversight — and needs a permanent reminder for every future engineer.
-**How to apply:** Update `CLAUDE.md` under Architecture → Auth System. Add: "CRITICAL: Every API route must call `requireAuth()` or `requireAdmin()` before any Supabase query. There is no RLS fallback — the service role key is the only gate."
-**Effort:** S | **Blocked by:** nothing
+~~### [P1] Mandatory auth guard pattern in CLAUDE.md~~
+~~**Completed:** v1.0.1.0 (2026-03-23) — `requireAdmin()` added to `lib/auth-guard.ts`, CLAUDE.md updated with critical auth guard documentation.~~
 
 ### [P1] Webhook state machine integration tests
 **What:** Integration tests (Jest + Supabase test project) for the Stripe webhook handler: (a) `checkout.session.completed` → reservation `reserved_paid` + order created, (b) duplicate event is a no-op, (c) unknown `reservation_type` in metadata logs + returns 200, (d) partial transaction rolled back on failure.
@@ -18,11 +15,20 @@
 
 ## P2 — Important (address before launch)
 
-### [P2] Checkout route integration tests
-**What:** The `app/api/checkout/route.ts` has no route-level integration tests for any reservation type. Handler tests (`handleRentalEvent`, `handlePurchase`, etc.) exist, but the route's own validation (type check, product_id required, quantity bounds, confirmation_email format) and dispatch wiring are untested.
-**Why:** The route is the single entry point for all checkout flows. A regression in route-level validation (e.g., removing a guard) would silently break all reservation types at once.
-**How to apply:** Add `__tests__/api/checkout/route.test.ts` covering: (a) missing reservation_type → 400, (b) invalid confirmation_email → 400, (c) purchase with quantity out of range → 400, (d) valid purchase body dispatches to handler and returns url. Mock all handlers.
-**Effort:** S (human: ~2h) → ~15 min CC | **Priority:** P2 | **Blocked by:** purchase flow (Task 3 of 2026-03-23-purchase-and-multi-unit-assignment.md)
+~~### [P2] Checkout route integration tests~~
+~~**Completed:** v1.0.1.0 (2026-03-23) — `__tests__/api/checkout/route.test.ts` added with 7 tests covering auth, type validation, quantity bounds, email validation, and purchase dispatch.~~
+
+### [P2] Unique constraint on reservation_units(reservation_id, unit_id)
+**What:** Add `UNIQUE(reservation_id, unit_id)` to `reservation_units`. Currently an admin can select the same unit for two atlas2 slots in `PackageUnitAssignment` — the RPC inserts duplicate rows silently.
+**Why:** No DB-level guard prevents the same unit being assigned twice to the same reservation. Duplicate rows corrupt fleet tracking queries.
+**How to apply:** Migration: `ALTER TABLE reservation_units ADD CONSTRAINT uq_reservation_unit UNIQUE (reservation_id, unit_id)`. Also add client-side filtering: in `PackageUnitAssignment`, filter sibling units out of each atlas2 dropdown's option list.
+**Effort:** XS (human: ~30min) → ~10 min CC | **Priority:** P2 | **Blocked by:** nothing
+
+### [P2] Status guard on assign-units route
+**What:** `POST /api/admin/reservations/[id]/assign-units` allows any admin to overwrite unit assignments on any reservation regardless of status (cancelled, completed, etc.). Add a guard: fetch the reservation status and return 409 if it's not in `ACTIVE_STATUSES`.
+**Why:** An admin could accidentally touch a completed or cancelled reservation. Low blast radius today (admin-only), but becomes a real bug as volume grows.
+**How to apply:** Fetch `reservations.status` at the start of the route handler; return `{ error: 'Reservation is not active' }` with 409 if status not in `ACTIVE_STATUSES`.
+**Effort:** XS | **Priority:** P2 | **Blocked by:** nothing
 
 ### [P2] Availability-aware filtering for package unit dropdowns
 **What:** `PackageUnitAssignment` currently shows all non-retired units of each type. A unit already assigned to another active package via `reservation_units` still appears available. Admin could accidentally double-assign it.

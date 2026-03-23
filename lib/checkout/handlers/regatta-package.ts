@@ -7,6 +7,8 @@ import {
   insertReservationUnits,
 } from '@/lib/db/packages'
 import { daysBetween, isValidDate } from '@/lib/utils/dates'
+import { sendEmail } from '@/lib/email/gmail'
+import { bookingPending } from '@/lib/email/templates'
 
 type RegattaPackageInput = {
   product_id: string
@@ -194,6 +196,17 @@ export async function handleRegattaPackage(
 
   // 9. Insert reservation_units for fleet-wide availability tracking
   await insertReservationUnits(reservationId, product.id, input.start_date, input.end_date)
+
+  const pendingEmail = bookingPending({
+    to: session.user.email ?? '',
+    reservationId,
+    productName: product.name,
+    startDate: input.start_date,
+    endDate: input.end_date,
+    totalCents,
+  })
+  void sendEmail(pendingEmail.to, pendingEmail.subject, pendingEmail.html)
+    .catch((err) => console.error('[email] bookingPending (regatta-package) failed:', err))
 
   return {
     status: 200,

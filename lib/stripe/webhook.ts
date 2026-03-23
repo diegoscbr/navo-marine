@@ -1,6 +1,8 @@
 // lib/stripe/webhook.ts
 import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/db/client'
+import { sendEmail } from '@/lib/email/gmail'
+import { bookingConfirmed } from '@/lib/email/templates'
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -49,7 +51,7 @@ export async function fulfillCheckoutSession(
   // 1. Find the reservation by stripe_checkout_session_id
   const { data: reservation, error: resErr } = await supabaseAdmin
     .from('reservations')
-    .select('id, user_id, unit_id, total_cents, customer_email')
+    .select('id, user_id, unit_id, total_cents, customer_email, product_id, start_date, end_date')
     .eq('stripe_checkout_session_id', sessionId)
     .single()
 
@@ -110,6 +112,27 @@ export async function fulfillCheckoutSession(
       // Non-fatal: order was already created, reservation is paid. Log and continue.
     }
   }
+
+  // 5. Send booking confirmed email (fire-and-forget)
+  const productId = (reservation as { product_id: string | null }).product_id
+  const { data: productRow } = productId
+    ? await supabaseAdmin.from('products').select('name').eq('id', productId).single()
+    : { data: null }
+
+  const confirmedEmail = bookingConfirmed({
+    to:
+      (reservation as { customer_email: string }).customer_email ??
+      session.customer_email ??
+      '',
+    reservationId: (reservation as { id: string }).id,
+    orderId: (order as { id: string }).id,
+    productName: (productRow as { name: string } | null)?.name ?? 'NAVO Rental',
+    startDate: (reservation as { start_date: string | null }).start_date ?? null,
+    endDate: (reservation as { end_date: string | null }).end_date ?? null,
+    totalCents: (reservation as { total_cents: number }).total_cents,
+  })
+  void sendEmail(confirmedEmail.to, confirmedEmail.subject, confirmedEmail.html)
+    .catch((err) => console.error('[email] bookingConfirmed failed:', err))
 
   return { ok: true, orderId: (order as { id: string }).id }
 }

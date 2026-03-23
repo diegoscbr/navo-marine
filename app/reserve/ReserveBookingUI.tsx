@@ -19,9 +19,13 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
   const [activeTab, setActiveTab] = useState<'event' | 'custom'>('event')
   const [selectedEventId, setSelectedEventId] = useState('')
   const [sailNumber, setSailNumber] = useState('')
+  const [confirmationEmail, setConfirmationEmail] = useState('')
   const [extraDays, setExtraDays] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Pre-fill confirmation email from session on first render
+  const emailValue = confirmationEmail !== '' ? confirmationEmail : (session?.user?.email ?? '')
 
   if (!session?.user) {
     return (
@@ -37,7 +41,7 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
   const selectedEvent = events.find((e) => e.id === selectedEventId)
   const eventProduct = selectedEvent?.rental_event_products?.[0]
 
-  const pricePerDay = eventProduct?.rental_price_per_day_cents ?? DEFAULT_PRICE_PER_DAY_CENTS
+  const pricePerDay = selectedEvent?.rental_price_per_day_cents ?? DEFAULT_PRICE_PER_DAY_CENTS
   const eventDays = selectedEvent
     ? daysBetween(selectedEvent.start_date, selectedEvent.end_date)
     : 0
@@ -58,6 +62,7 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
               event_id: selectedEventId,
               sail_number: sailNumber,
               extra_days: extraDays,
+              confirmation_email: emailValue.trim() || undefined,
             }
 
       const res = await fetch('/api/checkout', {
@@ -186,6 +191,18 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
       {/* Sail Number and submit — only shown on event tab */}
       {activeTab === 'event' && (
         <>
+          <label className="block mt-6">
+            <span className="text-sm text-white/60 mb-2 block">Confirmation Email</span>
+            <input
+              type="email"
+              value={emailValue}
+              onChange={(e) => setConfirmationEmail(e.target.value)}
+              placeholder="email@example.com"
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30"
+            />
+            <p className="mt-1 text-xs text-white/30">Booking confirmation will be sent here</p>
+          </label>
+
           <label className="block mt-6">
             <span className="text-sm text-white/60 mb-2 block">Sail Number</span>
             <input

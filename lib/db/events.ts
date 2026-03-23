@@ -76,12 +76,13 @@ export async function listActiveDateWindows(): Promise<DateWindow[]> {
 type EventPricing = {
   start_date: string
   end_date: string
+  rental_price_per_day_cents: number | null
 }
 
 export async function getEventPricing(eventId: string): Promise<EventPricing | null> {
   const { data, error } = await supabaseAdmin
     .from('rental_events')
-    .select('start_date, end_date')
+    .select('start_date, end_date, rental_price_per_day_cents')
     .eq('id', eventId)
     .single()
 

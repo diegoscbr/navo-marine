@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import type { PackageProduct } from '@/lib/db/packages'
 import { daysBetween, formatDateRange } from '@/lib/utils/dates'
 
@@ -12,8 +13,12 @@ type Props = {
 }
 
 export function PackageReviewStep({ product, startDate, endDate, onBack }: Props) {
+  const { data: session } = useSession()
+  const [confirmationEmail, setConfirmationEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const emailValue = confirmationEmail !== '' ? confirmationEmail : (session?.user?.email ?? '')
 
   const isHold = product.payment_mode === 'hold'
   const dayCount = daysBetween(startDate, endDate)
@@ -31,6 +36,7 @@ export function PackageReviewStep({ product, startDate, endDate, onBack }: Props
           product_id: product.id,
           start_date: startDate,
           end_date: endDate,
+          confirmation_email: emailValue.trim() || undefined,
         }),
       })
 
@@ -79,6 +85,20 @@ export function PackageReviewStep({ product, startDate, endDate, onBack }: Props
             The hold will be captured upon event completion.
           </div>
         )}
+      </div>
+
+      <div className="mt-6">
+        <label className="block">
+          <span className="text-xs text-white/40 uppercase tracking-wider mb-2 block">Confirmation Email</span>
+          <input
+            type="email"
+            value={emailValue}
+            onChange={(e) => setConfirmationEmail(e.target.value)}
+            placeholder="email@example.com"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 text-sm"
+          />
+          <p className="mt-1 text-xs text-white/30">Booking confirmation will be sent here</p>
+        </label>
       </div>
 
       {error && (

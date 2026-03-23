@@ -3,6 +3,8 @@ import { stripe } from '@/lib/stripe/client'
 import { getDateWindowProduct } from '@/lib/db/events'
 import { checkWindowAvailability } from '@/lib/db/availability'
 import { daysBetween } from '@/lib/utils/dates'
+import { sendEmail } from '@/lib/email/gmail'
+import { bookingPending } from '@/lib/email/templates'
 
 type RentalCustomInput = {
   date_window_id: string
@@ -139,11 +141,24 @@ export async function handleRentalCustom(
     return { status: 500, body: { error: 'Failed to create reservation' } }
   }
 
+  const reservationId = (reservation as { id: string }).id
+
+  const pendingEmail = bookingPending({
+    to: session.user.email ?? '',
+    reservationId,
+    productName: 'Atlas 2 Rental',
+    startDate: window?.start_date ?? null,
+    endDate: window?.end_date ?? null,
+    totalCents,
+  })
+  void sendEmail(pendingEmail.to, pendingEmail.subject, pendingEmail.html)
+    .catch((err) => console.error('[email] bookingPending (rental-custom) failed:', err))
+
   return {
     status: 200,
     body: {
       url: stripeSession.url,
-      reservation_id: (reservation as { id: string }).id,
+      reservation_id: reservationId,
     },
   }
 }

@@ -3,6 +3,8 @@ import { stripe } from '@/lib/stripe/client'
 import { getEventProduct, getEventPricing } from '@/lib/db/events'
 import { checkEventAvailability } from '@/lib/db/availability'
 import { daysBetween } from '@/lib/utils/dates'
+import { sendEmail } from '@/lib/email/gmail'
+import { bookingPending } from '@/lib/email/templates'
 
 type RentalEventInput = {
   event_id: string
@@ -51,9 +53,9 @@ export async function handleRentalEvent(
   // 3. Compute total price
   // Use per-day pricing from eventProduct if available; fall back to flat rental_price_cents
   let totalCents: number
-  if (eventProduct.rental_price_per_day_cents != null && event != null) {
+  if (event?.rental_price_per_day_cents != null) {
     const eventDays = daysBetween(event.start_date, event.end_date)
-    totalCents = eventProduct.rental_price_per_day_cents * (eventDays + extra_days)
+    totalCents = event.rental_price_per_day_cents * (eventDays + extra_days)
   } else {
     totalCents = eventProduct.rental_price_cents
   }
@@ -125,11 +127,24 @@ export async function handleRentalEvent(
     return { status: 500, body: { error: 'Failed to create reservation' } }
   }
 
+  const reservationId = (reservation as { id: string }).id
+
+  const pendingEmail = bookingPending({
+    to: session.user.email ?? '',
+    reservationId,
+    productName: 'Atlas 2 Rental',
+    startDate: event?.start_date ?? null,
+    endDate: event?.end_date ?? null,
+    totalCents,
+  })
+  void sendEmail(pendingEmail.to, pendingEmail.subject, pendingEmail.html)
+    .catch((err) => console.error('[email] bookingPending (rental-event) failed:', err))
+
   return {
     status: 200,
     body: {
       url: stripeSession.url,
-      reservation_id: (reservation as { id: string }).id,
+      reservation_id: reservationId,
     },
   }
 }

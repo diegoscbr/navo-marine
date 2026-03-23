@@ -14,6 +14,7 @@ type CheckoutBody = {
   extra_days?: number
   start_date?: string
   end_date?: string
+  confirmation_email?: string
 }
 
 // IMPORTANT: 'purchase' must remain here — existing product purchase flow uses it.
@@ -26,14 +27,26 @@ export async function POST(req: NextRequest) {
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const authedSession = { user: session.user } as { user: { id?: string | null; email?: string | null } }
-
   let body: Partial<CheckoutBody>
   try {
     body = (await req.json()) as Partial<CheckoutBody>
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
+
+  // Use confirmation_email if provided and valid; fall back to session email
+  const rawConfirmEmail = body.confirmation_email?.trim()
+  const emailOverride =
+    rawConfirmEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawConfirmEmail)
+      ? rawConfirmEmail
+      : null
+  if (rawConfirmEmail && !emailOverride) {
+    return NextResponse.json({ error: 'confirmation_email is not a valid email address' }, { status: 400 })
+  }
+
+  const authedSession = {
+    user: { ...session.user, email: emailOverride ?? session.user.email },
+  } as { user: { id?: string | null; email?: string | null } }
 
   // 2. Common validation
   if (!body.reservation_type || !VALID_TYPES.includes(body.reservation_type as typeof VALID_TYPES[number])) {

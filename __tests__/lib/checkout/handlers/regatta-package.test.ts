@@ -3,6 +3,10 @@
  * @jest-environment node
  */
 
+jest.mock('@/lib/email/gmail', () => ({ sendEmail: jest.fn().mockResolvedValue(undefined) }))
+jest.mock('@/lib/email/templates', () => ({
+  bookingPending: jest.fn().mockReturnValue({ to: 'test@test.com', subject: 'sub', html: '<p/>' }),
+}))
 jest.mock('@/lib/db/packages', () => ({
   getPackageProductById: jest.fn(),
   checkPackageAvailability: jest.fn(),

@@ -59,9 +59,9 @@ All items came from the user's manual E2E feedback pass (`docs/context/feedback/
 
 ---
 
-## What Was Built — Session 5 (2026-03-23) — IN PROGRESS
+## What Was Built — Session 5 (2026-03-23) — COMPLETE
 
-**Task 2 committed (b81cb61).** Task 3 half-done, not yet committed.
+**254 tests passing. Build green. Both tasks committed.**
 
 | Feature | Files | Status |
 |---------|-------|--------|
@@ -71,21 +71,12 @@ All items came from the user's manual E2E feedback pass (`docs/context/feedback/
 | POST /api/admin/reservations/[id]/assign-units | `app/api/admin/reservations/[id]/assign-units/route.ts` | ✅ committed |
 | PackageUnitAssignment (N atlas2 dropdowns) | `app/admin/reservations/PackageUnitAssignment.tsx` | ✅ committed |
 | Reservations page: conditional UI, reservation_type in query | `app/admin/reservations/page.tsx` | ✅ committed |
-| Migration 008: quantity INT DEFAULT 1 on reservations | `supabase/migrations/008_reservations_quantity.sql` | ✅ applied, NOT committed |
-| Purchase handler (shipping_address_collection, quantity stored) | `lib/checkout/handlers/purchase.ts` | ✅ written, NOT committed |
-| Checkout route wired (purchase replaces 501) | `app/api/checkout/route.ts` | ✅ written, NOT committed |
-| ProductPurchasePanel: Buy Now + confirmation_email | `app/products/[slug]/ProductPurchasePanel.tsx` | ✅ written, NOT committed |
-| Purchase handler tests (9) | `__tests__/lib/checkout/handlers/purchase.test.ts` | ✅ written, NOT committed |
-| Checkout route tests (7) | `__tests__/api/checkout/route.test.ts` | ✅ written, NOT committed |
-
-**238 tests passing** (Task 2). Task 3 tests also passing (9+7=16 new, need full suite check after build fix).
-
-### Task 3 remaining steps
-1. Confirm build passes — type error fix applied to `lib/checkout/handlers/purchase.ts` (changed to `Stripe.Checkout.SessionCreateParams.LineItem[]`)
-2. Run full test suite
-3. Commit Task 3 files
-4. Update current-state.md to mark C1/C2 complete
-5. Run `/ship`
+| Migration 008: quantity INT DEFAULT 1 on reservations | `supabase/migrations/008_reservations_quantity.sql` | ✅ committed + applied |
+| Purchase handler (shipping_address_collection, quantity stored) | `lib/checkout/handlers/purchase.ts` | ✅ committed |
+| Checkout route wired (purchase replaces 501) | `app/api/checkout/route.ts` | ✅ committed |
+| ProductPurchasePanel: Buy Now + confirmation_email | `app/products/[slug]/ProductPurchasePanel.tsx` | ✅ committed |
+| Purchase handler tests (9) | `__tests__/lib/checkout/handlers/purchase.test.ts` | ✅ committed |
+| Checkout route tests (7) | `__tests__/api/checkout/route.test.ts` | ✅ committed |
 
 ---
 
@@ -117,8 +108,8 @@ All items came from the user's manual E2E feedback pass (`docs/context/feedback/
 
 | # | Feature | Priority | Details |
 |---|---------|----------|---------|
-| 1 | **Purchase checkout + multi-unit assignment** | 🔴 P1 — implementing now | Plan fully reviewed (CEO + Codex + Eng). See `docs/superpowers/plans/2026-03-23-purchase-and-multi-unit-assignment.md`. |
-| 3 | **Multi-unit assignment for package reservations (Bug #3)** | 🔴 P1 | Package reservations need `unit_id` FK on `reservation_units` + per-role admin UI. Part of Task 2 in purchase plan. |
+| 2 | **Admin KPI dashboard** | 🟡 P2 | `/admin` redirects to reservations. Replace with revenue/bookings/fleet KPI component. See TODOS.md. |
+| 3 | **Webhook integration tests** | 🟢 P1 | Not user-facing. Real HMAC via `generateTestHeaderString`. See TODOS.md. |
 | 2 | **Admin KPI dashboard** | 🟡 P2 | `/admin` redirects to reservations. Replace with revenue/bookings/fleet KPI component. See TODOS.md. |
 | 3 | **Webhook integration tests** | 🟢 P1 | Not user-facing. Real HMAC via `generateTestHeaderString`. See TODOS.md. |
 
@@ -140,8 +131,8 @@ All items came from the user's manual E2E feedback pass (`docs/context/feedback/
 
 | # | Task | Status |
 |---|------|--------|
-| C1 | Purchase checkout (Buy Now on `/products/atlas-2`) | 🔄 Implementing |
-| C2 | Multi-unit assignment for package reservations | 🔄 Implementing |
+| C1 | Purchase checkout (Buy Now on `/products/atlas-2`) | ✅ Done (session 5) |
+| C2 | Multi-unit assignment for package reservations | ✅ Done (session 5) |
 
 ### Track B — Gmail Setup (Manual — you do this)
 

@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { useSession } from 'next-auth/react'
 import type { StorefrontProduct } from '@/lib/commerce/types'
 
 function formatUSD(cents: number) {
@@ -14,8 +15,12 @@ type ProductPurchasePanelProps = {
 }
 
 export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
+  const { data: sessionData } = useSession()
   const [quantity, setQuantity] = useState(1)
   const [warrantySelected, setWarrantySelected] = useState(true)
+  const [confirmationEmail, setConfirmationEmail] = useState('')
+  const [purchasing, setPurchasing] = useState(false)
+  const [purchaseError, setPurchaseError] = useState<string | null>(null)
 
   const warranty = product.addOns.find((addon) => addon.slug === 'vakaros-care-warranty')
 
@@ -28,6 +33,36 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
 
   const decrement = () => setQuantity((current) => Math.max(1, current - 1))
   const increment = () => setQuantity((current) => Math.min(8, current + 1))
+
+  const emailToUse = confirmationEmail.trim() || sessionData?.user?.email || ''
+
+  async function handleCheckout() {
+    setPurchasing(true)
+    setPurchaseError(null)
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reservation_type: 'purchase',
+          product_id: product.slug,
+          quantity,
+          warranty_selected: warrantySelected,
+          confirmation_email: emailToUse || undefined,
+        }),
+      })
+      const data = (await res.json()) as { url?: string; error?: string }
+      if (!res.ok || !data.url) {
+        setPurchaseError(data.error ?? 'Checkout failed. Please try again.')
+        return
+      }
+      window.location.href = data.url
+    } catch {
+      setPurchaseError('Network error. Please try again.')
+    } finally {
+      setPurchasing(false)
+    }
+  }
 
   return (
     <motion.aside
@@ -93,13 +128,30 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         </div>
       </div>
 
+      <div className="mt-6">
+        <label className="block text-xs text-white/40 mb-1" htmlFor="purchase-email">
+          Confirmation email
+        </label>
+        <input
+          id="purchase-email"
+          type="email"
+          value={confirmationEmail}
+          onChange={(e) => setConfirmationEmail(e.target.value)}
+          placeholder={sessionData?.user?.email ?? 'your@email.com'}
+          className="w-full rounded-lg border border-white/10 bg-navy-700/50 px-3 py-2 text-sm text-white placeholder-white/30 focus:border-marine-500/60 focus:outline-none"
+        />
+      </div>
       <button
         type="button"
-        disabled
-        className="glass-btn glass-btn-primary mt-6 w-full px-6 py-3 text-sm font-medium opacity-60"
+        onClick={handleCheckout}
+        disabled={purchasing}
+        className="glass-btn glass-btn-primary mt-4 w-full px-6 py-3 text-sm font-medium disabled:opacity-60"
       >
-        Checkout Coming Soon
+        {purchasing ? 'Redirecting to checkout…' : 'Buy Now'}
       </button>
+      {purchaseError && (
+        <p className="mt-2 text-xs text-red-400">{purchaseError}</p>
+      )}
       <Link
         href="/contact"
         className="glass-btn glass-btn-ghost mt-3 inline-flex w-full justify-center px-6 py-3 text-sm font-medium"

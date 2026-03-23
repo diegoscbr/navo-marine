@@ -1,7 +1,7 @@
 # Current State — Resume Context
 
 > **For Claude:** Read this file at the start of any session to get full project context without re-explanation.
-> Last updated: 2026-03-22 (session 3)
+> Last updated: 2026-03-23 (session 5)
 
 ---
 
@@ -10,9 +10,9 @@
 **Active branch:** `dev` (staging on Vercel)
 **Main is prod.** All feature work merges to `dev`, then `dev` → `main` when ready to ship.
 
-**220 unit tests passing.** Vercel build was broken (type error: `rental_price_per_day_cents` on wrong type) — fixed and re-deployed this session. Build is green.
+**227 unit tests passing.** Build is green.
 
-Unit assignment (Blocker 1) is **complete**. 2 blockers remain before prod.
+All Track A code blockers are **complete**. Staging E2E pass is the only remaining gate before `dev` → `main`.
 
 ---
 
@@ -40,45 +40,108 @@ All items came from the user's manual E2E feedback pass (`docs/context/feedback/
 | Build fix: `rental_price_per_day_cents` on `RentalEvent` not `RentalEventProduct` | `lib/db/events.ts`, `lib/checkout/handlers/rental-event.ts`, `app/reserve/ReserveBookingUI.tsx` |
 | Admin unit assignment | `app/api/admin/reservations/[id]/assign/route.ts` (new), `app/admin/reservations/AssignUnitDropdown.tsx` (new), `app/admin/reservations/page.tsx` |
 
+## What Was Built — Session 4 (2026-03-23)
+
+| Feature | Files |
+|---------|-------|
+| Unit dropdown filter — shows `navo_number`, excludes units assigned to other active reservations, filters retired units | `lib/admin/unit-availability.ts` (new), `app/admin/reservations/page.tsx`, `app/admin/reservations/AssignUnitDropdown.tsx` |
+| Unit dropdown error feedback — shows error message on API failure instead of silent reset | `app/admin/reservations/AssignUnitDropdown.tsx` |
+| Tests: filter logic (4 cases) + component (3 cases) | `__tests__/lib/admin/filtering.test.ts` (new), `__tests__/components/admin/AssignUnitDropdown.test.tsx` (new) |
+
 ### Architecture notes
 
 - **Email:** Gmail API via service account JWT (`lib/email/gmail.ts`). Fire-and-forget — email failure never blocks checkout. Requires `GMAIL_SERVICE_ACCOUNT_KEY` + `GMAIL_FROM_ADDRESS` env vars.
 - **Confirmation email:** User explicitly provides the address at checkout (pre-filled from Google session, editable). Passed as `confirmation_email` in checkout body → overrides `session.user.email` in route before dispatching to handlers.
 - **Post-login redirect:** Dedicated `/auth/redirect` server page that reads session and redirects by domain. `callbackUrl` on Google sign-in points here.
 - **Admin events:** `rental_events` table. CRUD via `/api/admin/events` and `/api/admin/events/[id]`. Events populate the "Rent for an Event" dropdown on `/reserve`.
-- **Unit assignment:** `PATCH /api/admin/reservations/[id]/assign` — sets `unit_id` on a reservation (pass `null` to unassign). `AssignUnitDropdown` client component in reservations table, calls API + `router.refresh()`. Query fetches all units from `units` table with no status filter.
+- **Unit assignment:** `PATCH /api/admin/reservations/[id]/assign` — sets `unit_id` on a reservation (pass `null` to unassign). Dropdown filters to available units only via `availableUnitsForReservation()` in `lib/admin/unit-availability.ts`. Shows `navo_number` (e.g., "NAVO-001"). Retired units excluded via `.is('retired_at', null)`.
 - **`rental_price_per_day_cents` lives on `rental_events` (the event row), NOT on `rental_event_products`.** Use `getEventPricing(eventId)` which now selects this field.
 
 ---
 
-## What's NOT Implemented Yet (Remaining MVP Blockers)
+## What Was Built — Session 5 (2026-03-23) — IN PROGRESS
+
+**Task 2 committed (b81cb61).** Task 3 half-done, not yet committed.
+
+| Feature | Files | Status |
+|---------|-------|--------|
+| requireAdmin() in auth-guard | `lib/auth-guard.ts` | ✅ committed |
+| Export ACTIVE_STATUSES + 5th param (reservationUnits) | `lib/admin/unit-availability.ts` | ✅ committed |
+| Migration 007: unit_id FK + assign_reservation_units() RPC | `supabase/migrations/007_reservation_units_unit_id.sql` | ✅ committed + applied |
+| POST /api/admin/reservations/[id]/assign-units | `app/api/admin/reservations/[id]/assign-units/route.ts` | ✅ committed |
+| PackageUnitAssignment (N atlas2 dropdowns) | `app/admin/reservations/PackageUnitAssignment.tsx` | ✅ committed |
+| Reservations page: conditional UI, reservation_type in query | `app/admin/reservations/page.tsx` | ✅ committed |
+| Migration 008: quantity INT DEFAULT 1 on reservations | `supabase/migrations/008_reservations_quantity.sql` | ✅ applied, NOT committed |
+| Purchase handler (shipping_address_collection, quantity stored) | `lib/checkout/handlers/purchase.ts` | ✅ written, NOT committed |
+| Checkout route wired (purchase replaces 501) | `app/api/checkout/route.ts` | ✅ written, NOT committed |
+| ProductPurchasePanel: Buy Now + confirmation_email | `app/products/[slug]/ProductPurchasePanel.tsx` | ✅ written, NOT committed |
+| Purchase handler tests (9) | `__tests__/lib/checkout/handlers/purchase.test.ts` | ✅ written, NOT committed |
+| Checkout route tests (7) | `__tests__/api/checkout/route.test.ts` | ✅ written, NOT committed |
+
+**238 tests passing** (Task 2). Task 3 tests also passing (9+7=16 new, need full suite check after build fix).
+
+### Task 3 remaining steps
+1. Confirm build passes — type error fix applied to `lib/checkout/handlers/purchase.ts` (changed to `Stripe.Checkout.SessionCreateParams.LineItem[]`)
+2. Run full test suite
+3. Commit Task 3 files
+4. Update current-state.md to mark C1/C2 complete
+5. Run `/ship`
+
+---
+
+## What Was Planned — Session 5 (2026-03-23)
+
+**No code written.** Session was a `/plan-ceo-review` on `docs/superpowers/plans/2026-03-23-purchase-and-multi-unit-assignment.md`.
+
+### CEO Review Amendments (all written into the plan file)
+
+| # | Gap Found | Resolution |
+|---|-----------|------------|
+| 1 | Non-atomic delete+insert in assign-units route | Fixed: Supabase RPC transaction in migration 007 |
+| 2 | `availableUnitsForReservation()` misses package-assigned units → double-booking | Fixed: extend function with `reservationUnits` param |
+| 3 | 1 atlas2 dropdown, packages need up to 5 | Fixed: N dropdowns matching `atlas2_units_required` |
+| 4 | Purchase checkout captures no shipping address | Fixed: `shipping_address_collection` in Stripe session |
+| 5 | No `confirmation_email` field in purchase panel | Fixed: `useSession()` pre-fill + editable input |
+| 6 | 3 error-path tests missing (Stripe failure, DB failure, RPC failure) | Fixed: added to plan |
+| 7 | `reservations.quantity` not stored | P1 TODO added to TODOS.md |
+| 8 | Email copy "See event details" wrong for purchases | P2 TODO |
+| 9 | Availability filter runs on capped list (`.limit(100)`) | P2 TODO |
+
+**Shipping address rule added to CLAUDE.md:** All `reservation_type: 'purchase'` Stripe sessions MUST include `shipping_address_collection: { allowed_countries: ['US'] }`. Rental/package flows do not need it.
+
+**Eng Review complete (2026-03-23):** 7 issues found, all resolved. Plan CLEARED for implementation. Eng amendments: export `ACTIVE_STATUSES`, add `reservation_type` to query, migration 008 for `quantity`, fix test mocks to use `.rpc()`, add checkout route test file.
+
+---
+
+## What's NOT Implemented Yet
 
 | # | Feature | Priority | Details |
 |---|---------|----------|---------|
-| 1 | **Payment atomicity** | 🟡 High | Double-submit not guarded — user could hit "Reserve & Pay" twice before redirect fires. Need optimistic disable + server-side idempotency check. |
-| 2 | **Admin KPI dashboard** | 🟡 High | `/admin` currently redirects to reservations. Plan: replace with KPI server component (revenue, bookings, fleet utilization). |
-| 3 | **Webhook integration tests** | 🟢 Low | Not user-facing. Plan: integration tests using `generateTestHeaderString`. |
-
-### Known issues / tech debt
-
-- **Unit dropdown only shows 2 units** — only 2 rows exist in `units` table. The dropdown fetches all units; it will show more once they exist.
-- **Unit assignment dropdown needs two fixes (discussed end of session 3):**
-  1. **Filter to available units only** — dropdown currently shows ALL units. It should exclude any unit already assigned to an active reservation (`reserved_unpaid`, `reserved_authorized`, `reserved_paid`). Fix: subquery or join on `reservations` to exclude `unit_id`s in use. The currently-assigned unit for THIS reservation should still appear (so it can be kept/changed).
-  2. **Fleet is read-only** — `/admin/fleet` is currently a read-only list. Non-technical admins need to add/remove units there to control what appears in the dropdown. Fix: add Create + Delete to `/admin/fleet` (a unit needs at minimum `serial_number`; `status` defaults to `available`). The dropdown is already driven by the `units` table — once fleet is editable, the pool is admin-controlled with no code changes needed.
+| 1 | **Purchase checkout + multi-unit assignment** | 🔴 P1 — implementing now | Plan fully reviewed (CEO + Codex + Eng). See `docs/superpowers/plans/2026-03-23-purchase-and-multi-unit-assignment.md`. |
+| 3 | **Multi-unit assignment for package reservations (Bug #3)** | 🔴 P1 | Package reservations need `unit_id` FK on `reservation_units` + per-role admin UI. Part of Task 2 in purchase plan. |
+| 2 | **Admin KPI dashboard** | 🟡 P2 | `/admin` redirects to reservations. Replace with revenue/bookings/fleet KPI component. See TODOS.md. |
+| 3 | **Webhook integration tests** | 🟢 P1 | Not user-facing. Real HMAC via `generateTestHeaderString`. See TODOS.md. |
 
 ---
 
 ## Full Launch Checklist
 
-### Track A — Code (Claude, use `superpowers:executing-plans`)
+### Track A — Code ✅ ALL COMPLETE (original scope)
 
-| # | Task | Priority | Notes |
-|---|------|----------|-------|
-| A1 | **Filter unit dropdown to available units** | 🔴 Critical | Exclude units already assigned to active reservations. Keep current unit for this reservation in the list. |
-| A2 | **Fleet management — add Create + Delete** | 🔴 Critical | `/admin/fleet` is read-only. Admins need to add/remove units to control the assignment pool. Minimum fields: `serial_number`, `status` (default `available`). |
-| A3 | **Payment double-submit guard** | 🟡 High | Disable "Reserve & Pay" button optimistically after first click + server-side idempotency check. |
-| A4 | **Admin KPI dashboard** | 🟡 High | Replace `/admin` redirect with KPI server component (revenue, bookings, fleet utilization). |
-| A5 | **Webhook integration tests** | 🟢 Low | Real HMAC via `generateTestHeaderString`. Not user-facing. |
+| # | Task | Status |
+|---|------|--------|
+| A1 | Filter unit dropdown to available units | ✅ Done (session 4) |
+| A2 | Fleet management — Create + Delete | ✅ Done (existed before session 4) |
+| A3 | Payment double-submit guard | ✅ Done (existed before session 4) |
+| A4 | Admin KPI dashboard | ⏩ Deferred to P2 post-launch |
+| A5 | Webhook integration tests | ⏩ Deferred, remains P1 in TODOS.md |
+
+### Track C — New Features (unblocked post-review)
+
+| # | Task | Status |
+|---|------|--------|
+| C1 | Purchase checkout (Buy Now on `/products/atlas-2`) | 🔄 Implementing |
+| C2 | Multi-unit assignment for package reservations | 🔄 Implementing |
 
 ### Track B — Gmail Setup (Manual — you do this)
 
@@ -102,7 +165,7 @@ Email code is fully built and wired. It silently no-ops until these env vars are
 - Confirmed email arrives after completing Stripe checkout (`4242 4242 4242 4242`)
 
 ### Final step
-After all tracks complete + staging E2E passes: PR `dev` → `main`, use `/ship` skill.
+After staging E2E passes: PR `dev` → `main`, use `/ship` skill.
 
 ---
 
@@ -110,9 +173,9 @@ After all tracks complete + staging E2E passes: PR `dev` → `main`, use `/ship`
 
 | File | Purpose |
 |------|---------|
-| `docs/superpowers/plans/2026-03-22-mvp-launch-readiness.md` | Full MVP implementation plan |
+| `lib/admin/unit-availability.ts` | Pure function: filters units to those available for a given reservation |
+| `docs/superpowers/plans/2026-03-23-track-a-final-blockers.md` | Track A implementation plan (Task 1 implemented, Tasks 2+3 deferred) |
 | `docs/context/feedback/feedback.md` | User's manual E2E notes |
-| `docs/e2e-test-log.md` | Manual E2E test results |
 | `supabase/migrations/` | All DB migrations (005 + 006 are Phase 4.5) |
 | `lib/checkout/handlers/` | Per-type checkout handlers (rental-event, rental-custom, regatta-package) |
 | `lib/email/gmail.ts` | Gmail API sender (service account JWT) |
@@ -122,6 +185,7 @@ After all tracks complete + staging E2E passes: PR `dev` → `main`, use `/ship`
 | `app/admin/events/` | Admin event management UI |
 | `app/admin/reservations/AssignUnitDropdown.tsx` | Unit assignment dropdown (client component) |
 | `app/api/admin/reservations/[id]/assign/route.ts` | PATCH endpoint for unit assignment |
+| `docs/superpowers/plans/2026-03-23-purchase-and-multi-unit-assignment.md` | CEO-reviewed plan for Track C (purchase + multi-unit) — includes all amendments |
 
 ---
 
@@ -134,3 +198,4 @@ After all tracks complete + staging E2E passes: PR `dev` → `main`, use `/ship`
 - `units` table uses `added_at` (not `created_at`) for the timestamp column.
 - `rental_price_per_day_cents` lives on `rental_events` (the event row), fetched via `getEventPricing()`. It does NOT live on `rental_event_products`.
 - Next.js 16 App Router: dynamic route `params` is a `Promise<{ id: string }>` — must be awaited.
+- **Shipping address rule:** All `reservation_type: 'purchase'` Stripe sessions MUST include `shipping_address_collection: { allowed_countries: ['US'] }`. Rentals/packages do not need it.

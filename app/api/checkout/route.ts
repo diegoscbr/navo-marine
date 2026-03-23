@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 import { handleRentalEvent } from '@/lib/checkout/handlers/rental-event'
 import { handleRentalCustom } from '@/lib/checkout/handlers/rental-custom'
 import { handleRegattaPackage } from '@/lib/checkout/handlers/regatta-package'
+import { handlePurchase } from '@/lib/checkout/handlers/purchase'
 
 type CheckoutBody = {
   reservation_type: string
@@ -15,6 +16,8 @@ type CheckoutBody = {
   start_date?: string
   end_date?: string
   confirmation_email?: string
+  quantity?: number
+  warranty_selected?: boolean
 }
 
 // IMPORTANT: 'purchase' must remain here — existing product purchase flow uses it.
@@ -117,6 +120,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result.body, { status: result.status })
   }
 
-  // 'purchase' type — not yet implemented
-  return NextResponse.json({ error: 'purchase type not yet implemented' }, { status: 501 })
+  // 'purchase' type
+  const rawQuantity = Number(body.quantity ?? 1)
+  if (!Number.isInteger(rawQuantity) || rawQuantity < 1 || rawQuantity > 8) {
+    return NextResponse.json({ error: 'quantity must be an integer between 1 and 8' }, { status: 400 })
+  }
+  const result = await handlePurchase(
+    {
+      product_id: body.product_id,
+      quantity: rawQuantity,
+      warranty_selected: body.warranty_selected ?? false,
+    },
+    authedSession,
+    baseUrl,
+  )
+  return NextResponse.json(result.body, { status: result.status })
 }

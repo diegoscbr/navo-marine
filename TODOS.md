@@ -18,6 +18,18 @@
 
 ## P2 — Important (address before launch)
 
+### [P2] Checkout route integration tests
+**What:** The `app/api/checkout/route.ts` has no route-level integration tests for any reservation type. Handler tests (`handleRentalEvent`, `handlePurchase`, etc.) exist, but the route's own validation (type check, product_id required, quantity bounds, confirmation_email format) and dispatch wiring are untested.
+**Why:** The route is the single entry point for all checkout flows. A regression in route-level validation (e.g., removing a guard) would silently break all reservation types at once.
+**How to apply:** Add `__tests__/api/checkout/route.test.ts` covering: (a) missing reservation_type → 400, (b) invalid confirmation_email → 400, (c) purchase with quantity out of range → 400, (d) valid purchase body dispatches to handler and returns url. Mock all handlers.
+**Effort:** S (human: ~2h) → ~15 min CC | **Priority:** P2 | **Blocked by:** purchase flow (Task 3 of 2026-03-23-purchase-and-multi-unit-assignment.md)
+
+### [P2] Availability-aware filtering for package unit dropdowns
+**What:** `PackageUnitAssignment` currently shows all non-retired units of each type. A unit already assigned to another active package via `reservation_units` still appears available. Admin could accidentally double-assign it.
+**Why:** Double-booking is silent — no constraint prevents it at the API or DB level. Fleet tracking becomes unreliable.
+**How to apply:** Extend CEO Amendment #2's `reservationUnits` check in `availableUnitsForReservation()` to also filter units shown in `PackageUnitAssignment`. Pass the fetched `reservationUnits` to the component and filter by `unit_type`. Add test cases.
+**Effort:** S (human: ~2h) → ~15 min CC | **Priority:** P2 | **Blocked by:** multi-unit assignment (Task 2 of 2026-03-23-purchase-and-multi-unit-assignment.md)
+
 ### [P2] Admin KPI dashboard
 **What:** Replace `/admin` redirect with a server component showing: total revenue (sum of `total_cents` on `reserved_paid` + `completed`), active bookings count, fleet utilization %, and last 5 reservations.
 **Why:** Admin currently lands on the reservations list with no high-level signal. Revenue is only visible in the Stripe dashboard. As bookings grow, operators need a glanceable overview without logging into Stripe.

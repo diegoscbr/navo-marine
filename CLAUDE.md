@@ -62,6 +62,10 @@ Full CRUD at `/admin/products/*`. The `ProductForm` component handles a complex 
 
 `/admin/fleet` — Read-only unit list. Queries `units` table via `supabaseAdmin`.
 
+### Checkout — Shipping Address Rule
+
+**CRITICAL:** Any Stripe checkout session for `reservation_type: 'purchase'` (physical hardware shipped to customer) MUST include `shipping_address_collection: { allowed_countries: ['US'] }`. Rental and package flows (on-site use, units returned) do NOT need it. A paid purchase order without a ship-to address cannot be fulfilled.
+
 ### Storefront vs Admin Products
 
 These are **two separate systems**:

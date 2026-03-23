@@ -1,7 +1,7 @@
 # Current State — Resume Context
 
 > **For Claude:** Read this file at the start of any session to get full project context without re-explanation.
-> Last updated: 2026-03-22 (session 2)
+> Last updated: 2026-03-22 (session 3)
 
 ---
 
@@ -61,18 +61,24 @@ All items came from the user's manual E2E feedback pass (`docs/context/feedback/
 
 ### Known issues / tech debt
 
-- **Unit dropdown only shows 2 units** — the code fetches all rows from `units` table with no filter. Only 2 units exist in the DB (tablets 01 and 02). Fix: seed additional units via Supabase dashboard or a migration. The dropdown will automatically show them once they exist.
+- **Unit dropdown only shows 2 units** — only 2 rows exist in `units` table. The dropdown fetches all units; it will show more once they exist.
+- **Unit assignment dropdown needs two fixes (discussed end of session 3):**
+  1. **Filter to available units only** — dropdown currently shows ALL units. It should exclude any unit already assigned to an active reservation (`reserved_unpaid`, `reserved_authorized`, `reserved_paid`). Fix: subquery or join on `reservations` to exclude `unit_id`s in use. The currently-assigned unit for THIS reservation should still appear (so it can be kept/changed).
+  2. **Fleet is read-only** — `/admin/fleet` is currently a read-only list. Non-technical admins need to add/remove units there to control what appears in the dropdown. Fix: add Create + Delete to `/admin/fleet` (a unit needs at minimum `serial_number`; `status` defaults to `available`). The dropdown is already driven by the `units` table — once fleet is editable, the pool is admin-controlled with no code changes needed.
 
 ---
 
-## Agreed Next Step
-
-Two parallel tracks before prod:
+## Full Launch Checklist
 
 ### Track A — Code (Claude, use `superpowers:executing-plans`)
-1. **Payment double-submit guard** — disable button optimistically + server-side idempotency check
-2. **Admin KPI dashboard** — replace `/admin` redirect with revenue/bookings/fleet metrics
-3. **Webhook integration tests** — real HMAC via `generateTestHeaderString` (low priority)
+
+| # | Task | Priority | Notes |
+|---|------|----------|-------|
+| A1 | **Filter unit dropdown to available units** | 🔴 Critical | Exclude units already assigned to active reservations. Keep current unit for this reservation in the list. |
+| A2 | **Fleet management — add Create + Delete** | 🔴 Critical | `/admin/fleet` is read-only. Admins need to add/remove units to control the assignment pool. Minimum fields: `serial_number`, `status` (default `available`). |
+| A3 | **Payment double-submit guard** | 🟡 High | Disable "Reserve & Pay" button optimistically after first click + server-side idempotency check. |
+| A4 | **Admin KPI dashboard** | 🟡 High | Replace `/admin` redirect with KPI server component (revenue, bookings, fleet utilization). |
+| A5 | **Webhook integration tests** | 🟢 Low | Real HMAC via `generateTestHeaderString`. Not user-facing. |
 
 ### Track B — Gmail Setup (Manual — you do this)
 
@@ -86,23 +92,17 @@ Email code is fully built and wired. It silently no-ops until these env vars are
 1. Security → API Controls → Domain-wide Delegation
 2. Add the service account's Client ID
 3. Scope: `https://www.googleapis.com/auth/gmail.send`
-4. This lets the service account impersonate your sending address (e.g. `noreply@navomarine.com`)
 
 **Step 3 — Vercel Environment Variables** (set on both `dev` and `main` branches)
 - `GMAIL_SERVICE_ACCOUNT_KEY` — paste the entire JSON key file as a single string
 - `GMAIL_FROM_ADDRESS` — e.g. `noreply@navomarine.com`
 
 **Step 4 — Verify on staging**
-After env vars set on `dev`, trigger a test booking and confirm:
-- Pending email arrives after "Reserve & Pay" (before Stripe redirect)
+- Pending email arrives after "Reserve & Pay"
 - Confirmed email arrives after completing Stripe checkout (`4242 4242 4242 4242`)
 
-### Track C — Seed more units (Manual — you do this)
-
-Insert additional units into the `units` table via Supabase dashboard so the assignment dropdown shows the full fleet.
-
 ### Final step
-After both tracks complete + staging E2E passes: PR `dev` → `main`, use `/ship` skill.
+After all tracks complete + staging E2E passes: PR `dev` → `main`, use `/ship` skill.
 
 ---
 

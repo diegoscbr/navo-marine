@@ -5,6 +5,10 @@ import { Navbar } from '@/components/layout/Navbar'
 jest.mock('next/navigation', () => ({ usePathname: () => '/' }))
 
 describe('Navbar', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true })
+  })
+
   it('renders NAVO logo', () => {
     render(<Navbar />)
     expect(screen.getByRole('link', { name: /NAVO Marine Technologies — home/i })).toBeInTheDocument()
@@ -56,6 +60,18 @@ describe('Navbar', () => {
   it('does NOT render Race Management link', () => {
     render(<Navbar />)
     expect(screen.queryByRole('link', { name: /race management/i })).not.toBeInTheDocument()
+  })
+
+  it('updates header styling after scrolling', () => {
+    const { container } = render(<Navbar />)
+    const header = container.querySelector('header')
+
+    expect(header).toHaveClass('bg-transparent')
+
+    Object.defineProperty(window, 'scrollY', { value: 24, writable: true, configurable: true })
+    fireEvent.scroll(window)
+
+    expect(header).toHaveClass('bg-navy-900/95', 'backdrop-blur-md', 'shadow-lg')
   })
 })
 

@@ -1,7 +1,7 @@
 # Current State — Resume Context
 
 > **For Claude:** Read this file at the start of any session to get full project context without re-explanation.
-> Last updated: 2026-03-23 (session 7)
+> Last updated: 2026-03-23 (session 8)
 
 ---
 
@@ -13,6 +13,27 @@
 **254 unit tests passing.** Build is green.
 
 PR open: `dev` → `main`. Gates before merging: Track B email verification + staging E2E pass.
+
+---
+
+## What Was Built — Session 8 (2026-03-23) — Hydration + Reserve Checkout Fixes
+
+| Change | Files | Status |
+|--------|-------|--------|
+| Navbar hydration mismatch fix: removed render-time `window.scrollY` read, initialize `scrolled` deterministically, then sync after mount | `components/layout/Navbar.tsx`, `__tests__/components/layout/Navbar.test.tsx` | ✅ done |
+| Rental-event pricing query fix: `getEventPricing()` now selects only `start_date` + `end_date`; pricing comes from the event-product allocation when present | `lib/db/events.ts`, `lib/checkout/handlers/rental-event.ts`, `__tests__/lib/db/events.test.ts`, `__tests__/lib/checkout/handlers/rental-event.test.ts` | ✅ done |
+| Reserve checkout 404 fix: reserve form now posts the selected event allocation `product_id` instead of blindly using the page-level fallback ID | `app/reserve/ReserveBookingUI.tsx`, `__tests__/components/reserve/ReserveBookingUI.test.tsx` | ✅ done |
+
+### Session 8 notes
+- The hydration warning on `/products/atlas-2` came from `Navbar` setting initial state from `window.scrollY` during the first client render. The fix keeps server HTML and first client render aligned.
+- The live DB does **not** currently expose `rental_events.rental_price_per_day_cents`. Fetching that column caused the 500 in `/api/checkout`.
+- For rental-event checkout, per-day pricing now comes from `rental_event_products.rental_price_per_day_cents` when present; otherwise fall back to `rental_price_cents`.
+- The reserve page still receives `defaultProductId`, but checkout must prefer the selected event allocation's real `product_id` to avoid `Event product not found` 404s when the fallback ID is stale.
+
+### Targeted verification run
+- `npm test -- --runTestsByPath __tests__/components/layout/Navbar.test.tsx`
+- `npm test -- --runTestsByPath __tests__/lib/db/events.test.ts __tests__/lib/checkout/handlers/rental-event.test.ts __tests__/components/reserve/ReserveBookingUI.test.tsx`
+- `npm test -- --runTestsByPath __tests__/components/reserve/ReserveBookingUI.test.tsx __tests__/api/checkout.test.ts __tests__/lib/checkout/handlers/rental-event.test.ts`
 
 ---
 
@@ -65,7 +86,7 @@ All items came from the user's manual E2E feedback pass (`docs/context/feedback/
 
 | Feature | Files |
 |---------|-------|
-| Build fix: `rental_price_per_day_cents` on `RentalEvent` not `RentalEventProduct` | `lib/db/events.ts`, `lib/checkout/handlers/rental-event.ts`, `app/reserve/ReserveBookingUI.tsx` |
+| Build fix (later superseded in session 8): attempted to read `rental_price_per_day_cents` from `RentalEvent` instead of `RentalEventProduct` | `lib/db/events.ts`, `lib/checkout/handlers/rental-event.ts`, `app/reserve/ReserveBookingUI.tsx` |
 | Admin unit assignment | `app/api/admin/reservations/[id]/assign/route.ts` (new), `app/admin/reservations/AssignUnitDropdown.tsx` (new), `app/admin/reservations/page.tsx` |
 
 ## What Was Built — Session 4 (2026-03-23)
@@ -83,7 +104,8 @@ All items came from the user's manual E2E feedback pass (`docs/context/feedback/
 - **Post-login redirect:** Dedicated `/auth/redirect` server page that reads session and redirects by domain. `callbackUrl` on Google sign-in points here.
 - **Admin events:** `rental_events` table. CRUD via `/api/admin/events` and `/api/admin/events/[id]`. Events populate the "Rent for an Event" dropdown on `/reserve`.
 - **Unit assignment:** `PATCH /api/admin/reservations/[id]/assign` — sets `unit_id` on a reservation (pass `null` to unassign). Dropdown filters to available units only via `availableUnitsForReservation()` in `lib/admin/unit-availability.ts`. Shows `navo_number` (e.g., "NAVO-001"). Retired units excluded via `.is('retired_at', null)`.
-- **`rental_price_per_day_cents` lives on `rental_events` (the event row), NOT on `rental_event_products`.** Use `getEventPricing(eventId)` which now selects this field.
+- **Rental-event pricing:** the live DB does not currently expose `rental_events.rental_price_per_day_cents`. `getEventPricing(eventId)` now fetches only `start_date` and `end_date`; per-day pricing comes from `rental_event_products.rental_price_per_day_cents` when present, else fall back to `rental_price_cents`.
+- **Reserve checkout product selection:** on `/reserve`, always post the selected event allocation's `product_id`. Do not assume the page-level Atlas fallback ID matches the allocation row for every event.
 
 ---
 
@@ -217,6 +239,7 @@ Email code is fully built and wired. It silently no-ops until these env vars are
 - Stripe is in **test mode** (`sk_test_...`). Use card `4242 4242 4242 4242` for testing.
 - RaceSense requires **90-day advance booking** — test dates must be 90+ days out.
 - `units` table uses `added_at` (not `created_at`) for the timestamp column.
-- `rental_price_per_day_cents` lives on `rental_events` (the event row), fetched via `getEventPricing()`. It does NOT live on `rental_event_products`.
+- For rental-event checkout, `getEventPricing()` fetches only the event date range. Per-day pricing comes from `rental_event_products.rental_price_per_day_cents` when present; otherwise use `rental_price_cents`.
+- On `/reserve`, submit the selected event allocation `product_id`, not just the `ATLAS2_PRODUCT_ID` fallback.
 - Next.js 16 App Router: dynamic route `params` is a `Promise<{ id: string }>` — must be awaited.
 - **Shipping address rule:** All `reservation_type: 'purchase'` Stripe sessions MUST include `shipping_address_collection: { allowed_countries: ['US'] }`. Rentals/packages do not need it.

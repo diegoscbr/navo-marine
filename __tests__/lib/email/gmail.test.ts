@@ -36,7 +36,7 @@ it('calls gmail.users.messages.send with a base64url-encoded raw message', async
   expect(call.userId).toBe('me')
   const decoded = Buffer.from(call.requestBody.raw, 'base64').toString('utf-8')
   expect(decoded).toContain('To: captain@test.com')
-  expect(decoded).toContain('Subject: Test Subject')
+  expect(decoded).toContain(`Subject: =?UTF-8?B?${Buffer.from('Test Subject').toString('base64')}?=`)
   expect(decoded).toContain('<p>Hello</p>')
 })
 

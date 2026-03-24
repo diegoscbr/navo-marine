@@ -93,6 +93,37 @@ describe('listActiveDateWindows', () => {
   })
 })
 
+describe('getEventPricing', () => {
+  it('returns the event date range', async () => {
+    const mockRow = {
+      start_date: '2026-04-01',
+      end_date: '2026-04-03',
+    }
+    const chain = makeChain({
+      single: jest.fn().mockResolvedValue({ data: mockRow, error: null }),
+    })
+    supabaseAdmin.from.mockReturnValue(chain)
+
+    const { getEventPricing } = await import('@/lib/db/events')
+    const result = await getEventPricing('evt-1')
+
+    expect(result).toEqual(mockRow)
+    expect(chain.select).toHaveBeenCalledWith('start_date, end_date')
+  })
+
+  it('returns null when the event does not exist', async () => {
+    const chain = makeChain({
+      single: jest.fn().mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'not found' } }),
+    })
+    supabaseAdmin.from.mockReturnValue(chain)
+
+    const { getEventPricing } = await import('@/lib/db/events')
+    const result = await getEventPricing('evt-missing')
+
+    expect(result).toBeNull()
+  })
+})
+
 describe('getEventProduct', () => {
   it('returns the event-product allocation', async () => {
     const mockRow = {

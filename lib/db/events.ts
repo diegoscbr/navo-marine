@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/db/client'
 export type RentalEventProduct = {
   product_id: string
   rental_price_cents: number
+  rental_price_per_day_cents?: number | null
   late_fee_cents: number
   reserve_cutoff_days: number
   capacity: number
@@ -76,13 +77,12 @@ export async function listActiveDateWindows(): Promise<DateWindow[]> {
 type EventPricing = {
   start_date: string
   end_date: string
-  rental_price_per_day_cents: number | null
 }
 
 export async function getEventPricing(eventId: string): Promise<EventPricing | null> {
   const { data, error } = await supabaseAdmin
     .from('rental_events')
-    .select('start_date, end_date, rental_price_per_day_cents')
+    .select('start_date, end_date')
     .eq('id', eventId)
     .single()
 

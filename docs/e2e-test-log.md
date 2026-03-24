@@ -1,7 +1,7 @@
 # E2E Test Log
 
 Manual browser testing results for critical user flows.
-Last updated: 2026-03-25
+Last updated: 2026-03-23
 
 ---
 
@@ -67,3 +67,50 @@ Last updated: 2026-03-25
 - [ ] Test 6: Reserve & Pay → Stripe checkout (re-test after Bug #1 fix)
 - [ ] Test 10: HOLD badge (needs a regatta package reservation in DB)
 - [ ] Test 12: Dashboard nav (re-test after Bug #2 fix)
+
+---
+
+## Session 4 Findings (2026-03-23)
+
+### Admin — Unit Assignment
+
+| # | Test | Status | Notes |
+|---|------|--------|-------|
+| 13 | Unit dropdown shows `navo_number` and filters to available units | ✅ PASS | Fixed this session |
+| 14 | Package reservations support multi-unit assignment | ❌ FAIL | **Bug #3** — see below |
+
+---
+
+### Bug #3 — Unit assignment is single-unit only; packages require multiple units
+
+**Symptom:** The unit assignment dropdown on `/admin/reservations` allows assigning exactly one unit per reservation. This works for individual Atlas 2 rentals but is wrong for package reservations.
+
+**Expected behavior by reservation/package type:**
+
+| Type | Units to assign |
+|------|----------------|
+| Individual Atlas 2 rental (`/reserve`) | 1 × Atlas 2 unit |
+| Race Committee Package | 1 × tablet + up to 5 × Atlas 2 units |
+| R/C W/L Course (Win-Win) Package | 1 × tablet only |
+| RaceSense Management Package | 1 × tablet only |
+
+**Root cause:** `reservations.unit_id` is a single FK column — it can only hold one unit. Packages that bundle multiple physical units (Race Committee: tablet + fleet of Atlas 2s) have no place to record each assignment.
+
+**Impact:** Admin cannot record which physical devices are deployed for a package booking. Race Committee is the most complex case: it requires one tablet and potentially 5 Atlas 2 units all assigned to the same reservation.
+
+**Fix required:**
+- A `reservation_units` join table (`reservation_id`, `unit_id`, `unit_role` e.g. `tablet` / `atlas`) to support multi-unit assignment
+- UI update on `/admin/reservations`: replace single dropdown with per-role assignment UI, gated by `reservation_type`
+- Individual rentals keep the existing single-unit pattern (can migrate `unit_id` → `reservation_units` or keep as-is)
+
+**Status:** ❌ Not fixed — needs design + schema migration
+
+---
+
+## Remaining / Re-test After Fixes
+
+- [ ] Test 5: Pick date range → Step 3 review
+- [ ] Test 6: Reserve & Pay → Stripe checkout (re-test after Bug #1 fix)
+- [ ] Test 10: HOLD badge (needs a regatta package reservation in DB)
+- [ ] Test 12: Dashboard nav (re-test after Bug #2 fix)
+- [ ] Test 14: Multi-unit assignment for package reservations (after Bug #3 fix)

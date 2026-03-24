@@ -39,9 +39,15 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
   }
 
   const selectedEvent = events.find((e) => e.id === selectedEventId)
-  const eventProduct = selectedEvent?.rental_event_products?.[0]
+  const eventProduct = selectedEvent?.rental_event_products?.find(
+    (product) => product.product_id === defaultProductId,
+  ) ?? selectedEvent?.rental_event_products?.[0]
+  const selectedProductId = eventProduct?.product_id ?? defaultProductId
 
-  const pricePerDay = selectedEvent?.rental_price_per_day_cents ?? DEFAULT_PRICE_PER_DAY_CENTS
+  const pricePerDay =
+    eventProduct?.rental_price_per_day_cents ??
+    selectedEvent?.rental_price_per_day_cents ??
+    DEFAULT_PRICE_PER_DAY_CENTS
   const eventDays = selectedEvent
     ? daysBetween(selectedEvent.start_date, selectedEvent.end_date)
     : 0
@@ -57,13 +63,13 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
     setLoading(true)
     try {
       const body = {
-              reservation_type: 'rental_event' as const,
-              product_id: defaultProductId,
-              event_id: selectedEventId,
-              sail_number: sailNumber,
-              extra_days: extraDays,
-              confirmation_email: emailValue.trim() || undefined,
-            }
+        reservation_type: 'rental_event' as const,
+        product_id: selectedProductId,
+        event_id: selectedEventId,
+        sail_number: sailNumber,
+        extra_days: extraDays,
+        confirmation_email: emailValue.trim() || undefined,
+      }
 
       const res = await fetch('/api/checkout', {
         method: 'POST',
@@ -86,7 +92,7 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
     }
   }
 
-  const canSubmit = sailNumber.trim().length > 0 && !!selectedEventId
+  const canSubmit = sailNumber.trim().length > 0 && !!selectedEventId && !!eventProduct
 
   return (
     <div className="w-full max-w-2xl">
@@ -216,6 +222,10 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
 
           {error && (
             <p className="mt-4 text-sm text-red-400">{error}</p>
+          )}
+
+          {selectedEventId && !eventProduct && (
+            <p className="mt-4 text-sm text-red-400">This event does not have a reservable product allocation.</p>
           )}
 
           <button

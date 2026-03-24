@@ -13,11 +13,11 @@ const mockEvents: RentalEvent[] = [
     event_url: null,
     start_date: '2026-06-10',
     end_date: '2026-06-12',
-    rental_price_per_day_cents: 3500,
     rental_event_products: [
       {
         product_id: 'prod-1',
         rental_price_cents: 10500,
+        rental_price_per_day_cents: 3500,
         late_fee_cents: 1500,
         reserve_cutoff_days: 14,
         capacity: 10,
@@ -85,6 +85,22 @@ describe('ReserveBookingUI', () => {
     await waitFor(() => {
       const body = JSON.parse(fetchMock.mock.calls[0][1].body)
       expect(body.extra_days).toBe(2)
+    })
+  })
+
+  it('posts the selected event allocation product_id when defaultProductId is stale', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ url: 'https://stripe.com' }) })
+    global.fetch = fetchMock
+
+    render(<ReserveBookingUI events={mockEvents} windows={[]} defaultProductId="stale-product-id" />)
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'evt-1' } })
+    fireEvent.change(screen.getByPlaceholderText(/sail/i), { target: { value: 'USA-1' } })
+    fireEvent.click(screen.getByRole('button', { name: /reserve/i }))
+
+    await waitFor(() => {
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+      expect(body.product_id).toBe('prod-1')
     })
   })
 })

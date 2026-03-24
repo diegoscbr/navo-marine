@@ -49,7 +49,7 @@ export function bookingPending(params: BookingParams): EmailResult {
     </table>
 
     <p style="margin-top:32px;font-size:13px;color:rgba(255,255,255,0.4)">
-      Questions? Reply to this email or call us at <a href="tel:6192889746" style="color:#1E6EFF">619-288-9746</a>.
+      Questions? Email us at <a href="mailto:info@navomarine.com" style="color:#1E6EFF">info@navomarine.com</a> or call <a href="tel:6192889746" style="color:#1E6EFF">619-288-9746</a>.
     </p>
   </div>
 </body>
@@ -57,7 +57,7 @@ export function bookingPending(params: BookingParams): EmailResult {
 
   return {
     to,
-    subject: `Your NAVO booking is processing — ${productName}`,
+    subject: `Your NAVO booking is processing - ${productName}`,
     html,
   }
 }
@@ -103,7 +103,7 @@ export function bookingConfirmed(params: BookingConfirmedParams): EmailResult {
     </table>
 
     <p style="margin-top:32px;font-size:13px;color:rgba(255,255,255,0.4)">
-      Questions? Reply to this email or call us at <a href="tel:6192889746" style="color:#1E6EFF">619-288-9746</a>.
+      Questions? Email us at <a href="mailto:info@navomarine.com" style="color:#1E6EFF">info@navomarine.com</a> or call <a href="tel:6192889746" style="color:#1E6EFF">619-288-9746</a>.
     </p>
   </div>
 </body>
@@ -111,7 +111,7 @@ export function bookingConfirmed(params: BookingConfirmedParams): EmailResult {
 
   return {
     to,
-    subject: `Booking confirmed — ${productName}`,
+    subject: `Booking confirmed - ${productName}`,
     html,
   }
 }

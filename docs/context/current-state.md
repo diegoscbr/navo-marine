@@ -1,7 +1,7 @@
 # Current State — Resume Context
 
 > **For Claude:** Read this file at the start of any session to get full project context without re-explanation.
-> Last updated: 2026-03-23 (session 6)
+> Last updated: 2026-03-23 (session 7)
 
 ---
 
@@ -12,7 +12,35 @@
 
 **254 unit tests passing.** Build is green.
 
-PR open: `dev` → `main`. Gates before merging: Track B (Gmail env vars) + staging E2E pass.
+PR open: `dev` → `main`. Gates before merging: Track B email verification + staging E2E pass.
+
+---
+
+## What Was Built — Session 7 (2026-03-23) — Track B Gmail
+
+| Change | Files | Status |
+|--------|-------|--------|
+| Subject line encoding fix (RFC 2047 Base64) | `lib/email/gmail.ts` | ✅ done |
+| Em dash → hyphen in subject lines | `lib/email/templates.ts` | ✅ done |
+| "Reply to this email" → `info@navomarine.com` in both templates | `lib/email/templates.ts` | ✅ done |
+
+### Gmail Setup Status
+- ✅ Google Cloud project `navo-marine` created, Gmail API enabled
+- ✅ Service account created, JSON key downloaded
+- ✅ Org policy `iam.disableServiceAccountKeyCreation` overridden (legacy + managed)
+- ✅ Domain-wide delegation authorized in Google Workspace Admin (`https://www.googleapis.com/auth/gmail.send`)
+- ✅ `noreply@navomarine.com` created as real Workspace user (required for impersonation)
+- ✅ `GMAIL_SERVICE_ACCOUNT_KEY` + `GMAIL_FROM_ADDRESS=noreply@navomarine.com` added to `.env.local`
+- 🔄 Vercel env vars added + dev branch redeployed — **pending final verification**
+- 🔄 Confirmed email (post-Stripe webhook) not yet tested
+
+### Next steps this session
+1. Test full purchase flow locally — verify pending email subject line is clean
+2. Complete Stripe checkout → verify confirmed email arrives
+3. Commit email fixes + push to dev
+4. Update Vercel env vars with `GMAIL_FROM_ADDRESS=noreply@navomarine.com` (currently set to wrong address on Vercel)
+5. Staging E2E pass
+6. Merge PR `dev` → `main`
 
 ---
 

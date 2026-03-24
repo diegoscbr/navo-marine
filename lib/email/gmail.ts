@@ -22,7 +22,7 @@ function makeRaw(to: string, subject: string, htmlBody: string): string {
   const message = [
     `From: NAVO Marine <${from}>`,
     `To: ${to}`,
-    `Subject: ${subject}`,
+    `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
     'MIME-Version: 1.0',
     'Content-Type: text/html; charset=UTF-8',
     '',

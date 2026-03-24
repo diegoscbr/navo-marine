@@ -5,6 +5,12 @@
 ~~### [P1] Mandatory auth guard pattern in CLAUDE.md~~
 ~~**Completed:** v1.0.1.0 (2026-03-23) — `requireAdmin()` added to `lib/auth-guard.ts`, CLAUDE.md updated with critical auth guard documentation.~~
 
+### [P1] Shipping address collection for rental flows
+**What:** The `/reserve` page (rental-event and rental-custom flows) does not collect a shipping address. Units need to be shipped to the customer, so we need a delivery address before fulfillment.
+**Why:** Without an address, there's no way to ship the unit. A `reserved_paid` reservation with no shipping address cannot be fulfilled — admin would have to follow up manually with every customer.
+**How to apply:** Two options: (a) Add `shipping_address_collection: { allowed_countries: ['US'] }` to the Stripe session in `handleRentalEvent` and `handleRentalCustom` — Stripe collects it at checkout and it's available on the session/payment intent. (b) Add an address form field directly in `ReserveBookingUI.tsx` before checkout. Option (a) is simpler and consistent with the purchase flow. Also update the `CLAUDE.md` shipping address rule — currently says rentals don't need it, which is wrong.
+**Effort:** XS (human: ~1h) → ~10 min CC | **Priority:** P1 | **Blocked by:** nothing
+
 ### [P1] Webhook state machine integration tests
 **What:** Integration tests (Jest + Supabase test project) for the Stripe webhook handler: (a) `checkout.session.completed` → reservation `reserved_paid` + order created, (b) duplicate event is a no-op, (c) unknown `reservation_type` in metadata logs + returns 200, (d) partial transaction rolled back on failure.
 **Why:** The webhook is the most critical codepath — it creates orders and confirms payments. Broken webhook = no revenue. E2E tests with a live Stripe account are slow and brittle for CI. Integration tests with a real test Supabase project catch the failure modes that matter.

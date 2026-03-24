@@ -1,7 +1,7 @@
 # Current State — Resume Context
 
 > **For Claude:** Read this file at the start of any session to get full project context without re-explanation.
-> Last updated: 2026-03-23 (session 8)
+> Last updated: 2026-03-24 (session 9)
 
 ---
 
@@ -10,9 +10,21 @@
 **Active branch:** `dev` (staging on Vercel)
 **Main is prod.** All feature work merges to `dev`, then `dev` → `main` when ready to ship.
 
-**254 unit tests passing.** Build is green.
+**258 unit tests passing.** Build is green.
 
-PR open: `dev` → `main`. Gates before merging: Track B email verification + staging E2E pass.
+**Staging E2E: PASSED.** Both emails (pending + confirmed) arriving clean. Webhook firing — reservations flip to `reserved_paid`. Admin portal confirmed correct.
+
+**PR open:** `dev` → `main` — ready to merge. One P1 gap found post-staging: rental flows don't collect shipping address (see TODOS.md).
+
+### Remaining before launch
+1. **[P1] Shipping address on rental flows** — `/reserve` (rental-event + rental-custom) doesn't collect a ship-to address. Add `shipping_address_collection` to Stripe session in `handleRentalEvent` + `handleRentalCustom`. Same pattern as purchase flow. See TODOS.md.
+2. **Merge PR** `dev` → `main`
+3. **Production webhook** — after merging, create Stripe webhook endpoint for `https://navomarine.com/api/webhooks/stripe`, copy signing secret, set `STRIPE_WEBHOOK_SECRET` on Vercel production, redeploy.
+4. **Production Gmail env vars** — confirm `GMAIL_SERVICE_ACCOUNT_KEY` + `GMAIL_FROM_ADDRESS` set on Vercel production (main branch).
+
+### Staging URL
+`https://navo-marine-git-dev-diegoscbrs-projects.vercel.app`
+Stripe sandbox webhook registered for staging. `STRIPE_WEBHOOK_SECRET` set on Vercel dev branch.
 
 ---
 

@@ -432,6 +432,30 @@ Shipped: Default model changed to Sonnet for structure tests (~30), Opus retaine
 
 Shipped as v0.5.0 on main. Includes `/plan-design-review` (report-only design audit), `/qa-design-review` (audit + fix loop), and `/design-consultation` (interactive DESIGN.md creation). `{{DESIGN_METHODOLOGY}}` resolver provides shared 80-item design audit checklist.
 
+### Design outside voices in /plan-eng-review
+
+**What:** Extend the parallel dual-voice pattern (Codex + Claude subagent) to /plan-eng-review's architecture review section.
+
+**Why:** The design beachhead (v0.11.3.0) proves cross-model consensus works for subjective reviews. Architecture reviews have similar subjectivity in tradeoff decisions.
+
+**Context:** Depends on learnings from the design beachhead. If the litmus scorecard format proves useful, adapt it for architecture dimensions (coupling, scaling, reversibility).
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** Design outside voices shipped (v0.11.3.0)
+
+### Outside voices in /qa visual regression detection
+
+**What:** Add Codex design voice to /qa for detecting visual regressions during bug-fix verification.
+
+**Why:** When fixing bugs, the fix can introduce visual regressions that code-level checks miss. Codex could flag "the fix broke the responsive layout" during re-test.
+
+**Context:** Depends on /qa having design awareness. Currently /qa focuses on functional testing.
+
+**Effort:** M
+**Priority:** P3
+**Depends on:** Design outside voices shipped (v0.11.3.0)
+
 ## Document-Release
 
 ### Auto-invoke /document-release from /ship — SHIPPED
@@ -464,6 +488,20 @@ Shipped in v0.8.3. Step 8.5 added to `/ship` — after creating the PR, `/ship` 
 **Priority:** P3
 **Depends on:** gstack-diff-scope (shipped)
 
+
+## Codex
+
+### Codex→Claude reverse buddy check skill
+
+**What:** A Codex-native skill (`.agents/skills/gstack-claude/SKILL.md`) that runs `claude -p` to get an independent second opinion from Claude — the reverse of what `/codex` does today from Claude Code.
+
+**Why:** Codex users deserve the same cross-model challenge that Claude users get via `/codex`. Currently the flow is one-way (Claude→Codex). Codex users have no way to get a Claude second opinion.
+
+**Context:** The `/codex` skill template (`codex/SKILL.md.tmpl`) shows the pattern — it wraps `codex exec` with JSONL parsing, timeout handling, and structured output. The reverse skill would wrap `claude -p` with similar infrastructure. Would be generated into `.agents/skills/gstack-claude/` by `gen-skill-docs --host codex`.
+
+**Effort:** M (human: ~2 weeks / CC: ~30 min)
+**Priority:** P1
+**Depends on:** None
 
 ## Completeness
 

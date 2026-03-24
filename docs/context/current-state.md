@@ -17,10 +17,18 @@
 **PR open:** `dev` → `main` — ready to merge. One P1 gap found post-staging: rental flows don't collect shipping address (see TODOS.md).
 
 ### Remaining before launch
-1. **[P1] Shipping address on rental flows** — `/reserve` (rental-event + rental-custom) doesn't collect a ship-to address. Add `shipping_address_collection` to Stripe session in `handleRentalEvent` + `handleRentalCustom`. Same pattern as purchase flow. See TODOS.md.
-2. **Merge PR** `dev` → `main`
-3. **Production webhook** — after merging, create Stripe webhook endpoint for `https://navomarine.com/api/webhooks/stripe`, copy signing secret, set `STRIPE_WEBHOOK_SECRET` on Vercel production, redeploy.
-4. **Production Gmail env vars** — confirm `GMAIL_SERVICE_ACCOUNT_KEY` + `GMAIL_FROM_ADDRESS` set on Vercel production (main branch).
+1. **[P1] Bug: Package unit assignment fails** — "Failed to save assignment" error on package reservations in admin. `assign_reservation_units()` RPC returning error — likely a double-booking conflict. Check Vercel logs for the exact DB error. See TODOS.md.
+2. **[P1] Shipping address on rental flows** — `/reserve` (rental-event + rental-custom) doesn't collect a ship-to address. Add `shipping_address_collection` to Stripe session in both handlers. See TODOS.md.
+3. **Merge PR** `dev` → `main`
+4. **Production webhook** — after merging, create Stripe webhook endpoint for `https://navomarine.com/api/webhooks/stripe`, copy signing secret, set `STRIPE_WEBHOOK_SECRET` on Vercel production, redeploy.
+5. **Production Gmail env vars** — confirm `GMAIL_SERVICE_ACCOUNT_KEY` + `GMAIL_FROM_ADDRESS` set on Vercel production (main branch).
+
+### Known issues / admin UX backlog (see TODOS.md for full details)
+- **Email ordering:** Processing email occasionally arrives after the confirmation email — both are sent correctly but Gmail delivery is async/non-deterministic. Not a bug, just a UX quirk to be aware of.
+- **Delete unpaid reservations:** No way to remove `reserved_unpaid` rows from admin dashboard. Accumulates test/abandoned checkouts.
+- **Pagination:** Reservations list loads all rows. Needs pagination before real booking volume.
+- **Double-booking prevention:** Unit availability filtering doesn't cover package dropdowns — admin can assign same unit to two reservations.
+- **Save/Edit button for unit assignment:** Dropdowns auto-save on change. Should require explicit Save to prevent misclick accidents.
 
 ### Staging URL
 `https://navo-marine-git-dev-diegoscbrs-projects.vercel.app`

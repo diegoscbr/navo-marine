@@ -5,6 +5,12 @@
 ~~### [P1] Mandatory auth guard pattern in CLAUDE.md~~
 ~~**Completed:** v1.0.1.0 (2026-03-23) — `requireAdmin()` added to `lib/auth-guard.ts`, CLAUDE.md updated with critical auth guard documentation.~~
 
+### [P1] Bug: Package unit assignment "Failed to save assignment" error
+**What:** On the admin reservations page, package reservations (e.g. R/C Windward Leeward Course Package) show "Failed to save assignment. Please try again." when saving multi-unit assignments. Observed on staging 2026-03-24. The `POST /api/admin/reservations/[id]/assign-units` RPC is returning an error.
+**Why:** Package reservations with 5 atlas2 slots are failing to save via the `assign_reservation_units()` RPC. Likely cause: a unit already assigned to another active reservation is being selected (double-booking conflict), OR the RPC is hitting a DB constraint. Needs investigation with Vercel/Supabase logs.
+**How to apply:** Check Vercel function logs for the assign-units POST to see the exact DB error. If it's a uniqueness conflict on `reservation_units`, the fix is preventing already-assigned units from appearing in the dropdowns (see availability-aware filtering TODO). If it's a different error, fix the RPC.
+**Effort:** S | **Priority:** P1 | **Blocked by:** nothing
+
 ### [P1] Shipping address collection for rental flows
 **What:** The `/reserve` page (rental-event and rental-custom flows) does not collect a shipping address. Units need to be shipped to the customer, so we need a delivery address before fulfillment.
 **Why:** Without an address, there's no way to ship the unit. A `reserved_paid` reservation with no shipping address cannot be fulfilled — admin would have to follow up manually with every customer.
@@ -41,6 +47,24 @@
 **Why:** Double-booking is silent — no constraint prevents it at the API or DB level. Fleet tracking becomes unreliable.
 **How to apply:** Extend CEO Amendment #2's `reservationUnits` check in `availableUnitsForReservation()` to also filter units shown in `PackageUnitAssignment`. Pass the fetched `reservationUnits` to the component and filter by `unit_type`. Add test cases.
 **Effort:** S (human: ~2h) → ~15 min CC | **Priority:** P2 | **Blocked by:** multi-unit assignment (Task 2 of 2026-03-23-purchase-and-multi-unit-assignment.md)
+
+### [P2] Admin reservations — delete unpaid reservations
+**What:** Admins need the ability to cancel/delete `reserved_unpaid` reservations directly from the reservations dashboard. Currently there's no way to clean up abandoned checkouts from the UI.
+**Why:** Unpaid reservations accumulate over time (test checkouts, abandoned carts, expired sessions). The list becomes cluttered and the unit availability logic counts these as active — potentially blocking real bookings.
+**How to apply:** Add a delete/cancel button (trash icon or context menu) on each `reserved_unpaid` row. `DELETE /api/admin/reservations/[id]` — only allowed if status is `reserved_unpaid`. Soft-delete preferred (set status to `cancelled`) so history is preserved. Guard with `requireAdmin()`.
+**Effort:** S (human: ~1.5h) → ~15 min CC | **Priority:** P2 | **Blocked by:** nothing
+
+### [P2] Admin reservations — pagination
+**What:** The reservations list loads all rows with no pagination. As booking volume grows, this will become slow and unwieldy.
+**Why:** Already 22+ reservations after limited testing. At real volume (hundreds/year), the page will be slow and the list unmanageable. Unit availability queries already cap at `.limit(100)` which will silently miss rows.
+**How to apply:** Add server-side pagination (25 per page). Add page controls or infinite scroll to `app/admin/reservations/page.tsx`. Update unit availability queries to remove the `.limit(100)` cap or use a proper aggregate query.
+**Effort:** S (human: ~2h) → ~20 min CC | **Priority:** P2 | **Blocked by:** nothing
+
+### [P2] Admin unit assignment — Save/Edit button pattern
+**What:** Unit assignment dropdowns (`AssignUnitDropdown` for single-unit, `PackageUnitAssignment` for packages) currently auto-save on every dropdown change. This is error-prone — a misclick immediately fires a PATCH/POST to the DB with no confirmation.
+**Why:** Admin can accidentally assign the wrong unit with a single click. There's no way to review or undo before saving. Especially risky for package reservations with 5+ dropdowns where partial saves can leave inconsistent state.
+**How to apply:** Add a "Save" button that activates when any dropdown value changes. Show a "Saved" confirmation or error inline. For packages, save all dropdowns atomically on a single button click (current RPC already handles this — just defer the POST until Save is clicked).
+**Effort:** S (human: ~1.5h) → ~15 min CC | **Priority:** P2 | **Blocked by:** nothing
 
 ### [P2] Admin KPI dashboard
 **What:** Replace `/admin` redirect with a server component showing: total revenue (sum of `total_cents` on `reserved_paid` + `completed`), active bookings count, fleet utilization %, and last 5 reservations.

@@ -80,8 +80,13 @@ describe('POST /api/admin/events', () => {
   it('creates event and returns 201 for admin', async () => {
     auth.mockResolvedValue(ADMIN_SESSION)
     const newEvent = { id: 'e2', name: 'New Event', location: 'Boston', start_date: '2026-07-01', end_date: '2026-07-05', active: true }
-    const chain = makeChain({ single: jest.fn().mockResolvedValue({ data: newEvent, error: null }) })
-    supabaseAdmin.from.mockReturnValue(chain)
+    const eventChain = makeChain({ single: jest.fn().mockResolvedValue({ data: newEvent, error: null }) })
+    const productsChain = makeChain({ eq: jest.fn().mockResolvedValue({ data: [], error: null }) })
+    supabaseAdmin.from.mockImplementation((table: string) => {
+      if (table === 'rental_events') return eventChain
+      if (table === 'products') return productsChain
+      return makeChain()
+    })
     const { POST } = await import('@/app/api/admin/events/route')
     const req = new NextRequest('http://localhost/api/admin/events', {
       method: 'POST',
@@ -91,6 +96,87 @@ describe('POST /api/admin/events', () => {
     expect(res.status).toBe(201)
     const body = await res.json()
     expect(body.event.name).toBe('New Event')
+  })
+
+  it('auto-links all individual_rental products after creating event', async () => {
+    auth.mockResolvedValue(ADMIN_SESSION)
+
+    const newEvent = {
+      id: 'e3',
+      name: 'Auto-Link Event',
+      location: 'Miami',
+      start_date: '2026-08-01',
+      end_date: '2026-08-05',
+      active: true,
+    }
+
+    const products = [
+      { id: 'p1', name: 'Vakaros Atlas 2', price_per_day_cents: 3500 },
+      { id: 'p2', name: 'Tablet (Internal)', price_per_day_cents: null },
+    ]
+
+    const fromCalls: string[] = []
+
+    const eventChain = makeChain({
+      single: jest.fn().mockResolvedValue({ data: newEvent, error: null }),
+    })
+
+    const productsChain = makeChain({
+      eq: jest.fn().mockResolvedValue({ data: products, error: null }),
+    })
+
+    const linkChain = makeChain({
+      insert: jest.fn().mockResolvedValue({ data: null, error: null }),
+    })
+
+    supabaseAdmin.from.mockImplementation((table: string) => {
+      fromCalls.push(table)
+      if (table === 'rental_events') return eventChain
+      if (table === 'products') return productsChain
+      if (table === 'rental_event_products') return linkChain
+      return makeChain()
+    })
+
+    const { POST } = await import('@/app/api/admin/events/route')
+    const req = new NextRequest('http://localhost/api/admin/events', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'Auto-Link Event',
+        location: 'Miami',
+        start_date: '2026-08-01',
+        end_date: '2026-08-05',
+      }),
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(201)
+
+    expect(fromCalls).toContain('products')
+    expect(fromCalls).toContain('rental_event_products')
+
+    const insertCall = linkChain.insert.mock.calls[0][0]
+    expect(insertCall).toHaveLength(2)
+
+    expect(insertCall[0]).toEqual({
+      event_id: 'e3',
+      product_id: 'p1',
+      rental_price_cents: 17500,
+      late_fee_cents: 3500,
+      reserve_cutoff_days: 14,
+      capacity: 40,
+      inventory_status: 'in_stock',
+      rental_price_per_day_cents: 3500,
+    })
+
+    expect(insertCall[1]).toEqual({
+      event_id: 'e3',
+      product_id: 'p2',
+      rental_price_cents: 0,
+      late_fee_cents: 3500,
+      reserve_cutoff_days: 14,
+      capacity: 40,
+      inventory_status: 'in_stock',
+      rental_price_per_day_cents: null,
+    })
   })
 })
 

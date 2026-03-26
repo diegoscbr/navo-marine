@@ -62,5 +62,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Auto-link all individual_rental products to this event
+  const eventDays = Math.max(
+    1,
+    Math.ceil(
+      (new Date(body.end_date).getTime() - new Date(body.start_date).getTime()) /
+        (1000 * 60 * 60 * 24),
+    ) + 1,
+  )
+
+  const { data: products } = await supabaseAdmin
+    .from('products')
+    .select('id, price_per_day_cents')
+    .eq('category', 'individual_rental')
+
+  if (products && products.length > 0) {
+    const allocations = products.map((p: { id: string; price_per_day_cents: number | null }) => ({
+      event_id: data.id,
+      product_id: p.id,
+      rental_price_cents: (p.price_per_day_cents ?? 0) * eventDays,
+      late_fee_cents: 3500,
+      reserve_cutoff_days: 14,
+      capacity: 40,
+      inventory_status: 'in_stock',
+      rental_price_per_day_cents: p.price_per_day_cents ?? null,
+    }))
+
+    await supabaseAdmin.from('rental_event_products').insert(allocations)
+  }
+
   return NextResponse.json({ event: data }, { status: 201 })
 }

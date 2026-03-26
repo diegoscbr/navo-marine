@@ -121,3 +121,70 @@ describe('Navbar — authenticated', () => {
     expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/' })
   })
 })
+
+describe('Navbar — mobile menu', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true })
+  })
+
+  it('renders hamburger button with aria-label', () => {
+    render(<Navbar />)
+    expect(screen.getByRole('button', { name: /open menu/i })).toBeInTheDocument()
+  })
+
+  it('hamburger button has aria-expanded=false by default', () => {
+    render(<Navbar />)
+    expect(screen.getByRole('button', { name: /open menu/i })).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('shows mobile nav links when hamburger is clicked', () => {
+    render(<Navbar />)
+    fireEvent.click(screen.getByRole('button', { name: /open menu/i }))
+
+    // Mobile menu should now show all nav links (they also exist in desktop ul)
+    const productLinks = screen.getAllByRole('link', { name: /products/i })
+    expect(productLinks.length).toBeGreaterThanOrEqual(2) // desktop + mobile
+  })
+
+  it('toggles aria-expanded and aria-label on click', () => {
+    render(<Navbar />)
+    const btn = screen.getByRole('button', { name: /open menu/i })
+    fireEvent.click(btn)
+
+    const closeBtn = screen.getByRole('button', { name: /close menu/i })
+    expect(closeBtn).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('closes mobile menu when a nav link is clicked', () => {
+    render(<Navbar />)
+    fireEvent.click(screen.getByRole('button', { name: /open menu/i }))
+
+    // Click one of the mobile links
+    const mobileLinks = screen.getAllByRole('link', { name: /products/i })
+    fireEvent.click(mobileLinks[mobileLinks.length - 1]) // click the mobile one (last)
+
+    // Menu should close — hamburger should say "Open menu" again
+    expect(screen.getByRole('button', { name: /open menu/i })).toBeInTheDocument()
+  })
+
+  it('shows Login in mobile menu when unauthenticated', () => {
+    ;(useSession as jest.Mock).mockReturnValue({ data: null, status: 'unauthenticated' })
+    render(<Navbar />)
+    fireEvent.click(screen.getByRole('button', { name: /open menu/i }))
+
+    const loginLinks = screen.getAllByRole('link', { name: /login/i })
+    expect(loginLinks.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('shows Sign Out in mobile menu when authenticated', () => {
+    ;(useSession as jest.Mock).mockReturnValue({
+      data: { user: { name: 'Test', email: 'test@test.com', image: null }, expires: '9999-01-01' },
+      status: 'authenticated',
+    })
+    render(<Navbar />)
+    fireEvent.click(screen.getByRole('button', { name: /open menu/i }))
+
+    const signOutButtons = screen.getAllByRole('button', { name: /sign out/i })
+    expect(signOutButtons.length).toBeGreaterThanOrEqual(1)
+  })
+})

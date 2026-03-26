@@ -1,7 +1,7 @@
 # Current State — Resume Context
 
 > **For Claude:** Read this file at the start of any session to get full project context without re-explanation.
-> Last updated: 2026-03-26 (session 13 delete-reservation feature)
+> Last updated: 2026-03-26 (session 14 send-invoice feature + prod readiness)
 
 ---
 
@@ -19,9 +19,63 @@
 ### Remaining before launch
 1. **[P1] Apply migration 009 + verify package assignment on staging** — local code now passes array payloads, preserves package slot rows in the new migration, and filters package dropdowns. `supabase` CLI and `psql` are installed locally, but `supabase link --project-ref fdjuhjadjqkpqnpxgmue` is currently blocked by Supabase platform access control on the logged-in account. Still need to apply `supabase/migrations/009_reservation_units_slot_integrity.sql` using either the correct Supabase org account, `supabase db push --db-url`, or the dashboard SQL editor, then deploy `dev` and re-test an actual package assignment in admin.
 2. **[P1] Verify rental shipping capture on staging** — `rental_event` and `rental_custom` now request `shipping_address_collection`, and webhook fulfillment now stores `session.collected_information.shipping_details` into `orders.shipping_address`. Still need a live Stripe test on `/reserve` to verify the form appears and the order row captures the address.
-3. **Merge PR** `dev` → `main`
-4. **Production webhook** — after merging, create Stripe webhook endpoint for `https://navomarine.com/api/webhooks/stripe`, copy signing secret, set `STRIPE_WEBHOOK_SECRET` on Vercel production, redeploy.
-5. **Production Gmail env vars** — confirm `GMAIL_SERVICE_ACCOUNT_KEY` + `GMAIL_FROM_ADDRESS` set on Vercel production (main branch).
+3. **Set up production environment on Vercel** — see detailed checklist below
+4. **Merge PR** `dev` → `main`
+5. **Post-merge: switch Stripe to live mode** — replace test keys with live keys, update webhook endpoint, redeploy
+
+### Production environment setup checklist
+
+All env vars must be set on Vercel for the **Production** environment (`main` branch).
+
+#### Auth
+- [ ] `NEXTAUTH_SECRET` — random secret for JWT signing (generate with `openssl rand -base64 32`)
+- [ ] `NEXTAUTH_URL` — `https://navomarine.com`
+- [ ] `GOOGLE_CLIENT_ID` — Google OAuth client ID (same as staging)
+- [ ] `GOOGLE_CLIENT_SECRET` — Google OAuth client secret (same as staging)
+- [ ] **Google OAuth redirect URI** — add `https://navomarine.com/api/auth/callback/google` as an authorized redirect URI in [Google Cloud Console > Credentials](https://console.cloud.google.com/apis/credentials)
+
+#### Supabase
+- [ ] `NEXT_PUBLIC_SUPABASE_URL` — same as staging (single DB for now)
+- [ ] `NEXT_PUBLIC_SUPABASE_ANON_KEY` — same as staging
+- [ ] `SUPABASE_SERVICE_ROLE_KEY` — same as staging
+
+#### Stripe (test mode for now — switch to live post-launch)
+- [ ] `STRIPE_SECRET_KEY` — `sk_test_*` (same as staging for now)
+- [ ] `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` — `pk_test_*` (same as staging for now)
+- [ ] `STRIPE_WEBHOOK_SECRET` — **NEW production endpoint required:**
+  1. Go to [Stripe Dashboard > Developers > Webhooks](https://dashboard.stripe.com/test/webhooks)
+  2. Click **Add endpoint**
+  3. URL: `https://navomarine.com/api/webhooks/stripe`
+  4. Events: `checkout.session.completed`
+  5. Copy the signing secret (`whsec_...`) → set as `STRIPE_WEBHOOK_SECRET`
+
+#### Email
+- [ ] `GMAIL_SERVICE_ACCOUNT_KEY` — paste entire JSON key file as single string (same as staging)
+- [ ] `GMAIL_FROM_ADDRESS` — `noreply@navomarine.com`
+
+#### Optional
+- [ ] `ATLAS2_PRODUCT_ID` — falls back to hardcoded UUID `6f303d86-5763-4ece-aaad-b78d17852f8a` if unset
+
+### Post-merge: switch Stripe to live mode
+
+After merging `dev` → `main` and verifying prod works with test keys:
+
+1. **Activate Stripe live mode** in Stripe Dashboard
+2. **Create live webhook endpoint** — same URL (`https://navomarine.com/api/webhooks/stripe`), event `checkout.session.completed`, copy new `whsec_...`
+3. **Update Vercel production env vars:**
+   - `STRIPE_SECRET_KEY` → `sk_live_*`
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` → `pk_live_*`
+   - `STRIPE_WEBHOOK_SECRET` → new live signing secret
+4. **Redeploy** production on Vercel
+5. **Test** — make a real $1 test purchase or use Stripe's live test card flow
+
+### Post-launch: email deliverability
+
+Emails from `noreply@navomarine.com` currently land in spam for new recipients. To fix:
+
+- [ ] **SPF record** — add Google Workspace SPF to `navomarine.com` DNS
+- [ ] **DKIM record** — generate in Google Workspace Admin > Apps > Google Workspace > Gmail > Authenticate email
+- [ ] **DMARC record** — add `_dmarc.navomarine.com` TXT record (start with `p=none` to monitor)
 
 ### Session 13 implementation notes (2026-03-26) — Delete reservation feature
 
@@ -44,6 +98,25 @@ All five tasks are committed.
 - All 5 tests pass (render, dialog open, confirm+refresh, cancel, error display).
 
 **All tasks complete.** Delete button is wired into the reservations table with eligibility gating. Manual Stripe refund guide at `docs/admin/stripe-manual-refund.md`.
+
+### Session 14 implementation notes (2026-03-26) — Send Invoice + BCC + prod readiness
+
+| Feature | Status | Files |
+|---------|--------|-------|
+| BCC all emails to info@navomarine.com | ✅ committed | `lib/email/gmail.ts` |
+| `paymentRequest` email template | ✅ done | `lib/email/templates.ts`, `__tests__/lib/email/templates.test.ts` |
+| `POST /api/admin/reservations/[id]/send-invoice` | ✅ done | `app/api/admin/reservations/[id]/send-invoice/route.ts`, `__tests__/api/admin/reservations/send-invoice.test.ts` |
+| `SendInvoiceButton` component | ✅ done | `app/admin/reservations/SendInvoiceButton.tsx`, `__tests__/components/admin/SendInvoiceButton.test.tsx` |
+| Wire invoice button into reservations page | ✅ done | `app/admin/reservations/page.tsx` |
+| Manual invoice guide | ✅ done | `docs/admin/manual-invoice-guide.md` |
+
+**How it works:**
+- Unpaid reservations show a mail icon in the Actions column (next to delete trash icon)
+- Clicking opens a confirmation dialog showing customer email, amount, and product
+- On confirm: creates a new Stripe checkout session, updates `stripe_checkout_session_id` on the reservation, clears `expires_at` (prevents pg_cron auto-cancel), and emails the payment link via Gmail API
+- When the customer pays through the link, the existing webhook handles everything (status flip, order creation, confirmation email)
+- Re-sending is safe — each send creates a fresh Stripe session; old one simply expires unused
+- **Staging verified:** BCC to info@navomarine.com confirmed working. Customer email arrived in spam (expected for new sender — SPF/DKIM/DMARC setup needed post-launch).
 
 ### Known issues / admin UX backlog (see TODOS.md for full details)
 - **Email ordering:** Processing email occasionally arrives after the confirmation email — both are sent correctly but Gmail delivery is async/non-deterministic. Not a bug, just a UX quirk to be aware of.
@@ -300,12 +373,14 @@ Email code is fully built and wired. It silently no-ops until these env vars are
 | `supabase/migrations/` | All DB migrations (005 + 006 are Phase 4.5) |
 | `lib/checkout/handlers/` | Per-type checkout handlers (rental-event, rental-custom, regatta-package) |
 | `lib/email/gmail.ts` | Gmail API sender (service account JWT) |
-| `lib/email/templates.ts` | `bookingPending` + `bookingConfirmed` HTML email templates |
+| `lib/email/templates.ts` | `bookingPending`, `bookingConfirmed`, `paymentRequest` HTML email templates |
 | `lib/stripe/webhook.ts` | `fulfillCheckoutSession` — updates reservation, creates order, sends confirmed email |
 | `app/api/checkout/route.ts` | Checkout dispatch — auth + `confirmation_email` override, then dispatches by `reservation_type` |
 | `app/admin/events/` | Admin event management UI |
 | `app/admin/reservations/AssignUnitDropdown.tsx` | Unit assignment dropdown (client component) |
 | `app/admin/reservations/DeleteReservationButton.tsx` | Delete button with confirmation dialog (client component) |
+| `app/admin/reservations/SendInvoiceButton.tsx` | Send invoice button — creates Stripe checkout session and emails payment link |
+| `app/api/admin/reservations/[id]/send-invoice/route.ts` | POST endpoint for admin-initiated payment invoices |
 | `app/api/admin/reservations/[id]/assign/route.ts` | PATCH endpoint for unit assignment |
 | `app/api/admin/reservations/[id]/route.ts` | DELETE endpoint for removing a reservation and freeing units |
 | `docs/superpowers/plans/2026-03-23-purchase-and-multi-unit-assignment.md` | CEO-reviewed plan for Track C (purchase + multi-unit) — includes all amendments |

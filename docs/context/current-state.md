@@ -1,7 +1,7 @@
 # Current State — Resume Context
 
 > **For Claude:** Read this file at the start of any session to get full project context without re-explanation.
-> Last updated: 2026-03-26 (session 12 migration-access handoff)
+> Last updated: 2026-03-26 (session 13 delete-reservation feature)
 
 ---
 
@@ -23,9 +23,31 @@
 4. **Production webhook** — after merging, create Stripe webhook endpoint for `https://navomarine.com/api/webhooks/stripe`, copy signing secret, set `STRIPE_WEBHOOK_SECRET` on Vercel production, redeploy.
 5. **Production Gmail env vars** — confirm `GMAIL_SERVICE_ACCOUNT_KEY` + `GMAIL_FROM_ADDRESS` set on Vercel production (main branch).
 
+### Session 13 implementation notes (2026-03-26) — Delete reservation feature
+
+All five tasks are committed.
+
+| Task | Status | Files |
+|------|--------|-------|
+| Task 1: Auto-link events to products on creation | ✅ committed | `app/api/admin/events/route.ts`, `__tests__/api/admin/events.test.ts` |
+| Task 2: DELETE reservation API route | ✅ committed | `app/api/admin/reservations/[id]/route.ts`, `__tests__/api/admin/reservations/[id]/delete.test.ts` |
+| Task 3: DeleteReservationButton component | ✅ committed | `app/admin/reservations/DeleteReservationButton.tsx`, `__tests__/components/admin/DeleteReservationButton.test.tsx` |
+| Task 4: Wire delete button into reservations page | ✅ committed | `app/admin/reservations/page.tsx` |
+| Task 5: Stripe refund instructions document | ✅ committed | `docs/admin/stripe-manual-refund.md` |
+
+**Task 3 details:**
+- `DeleteReservationButton` is a `'use client'` component with a confirmation dialog (modal overlay).
+- Calls `DELETE /api/admin/reservations/[reservationId]` on confirm.
+- On success: closes dialog and calls `router.refresh()`.
+- On API failure: shows the error message from the response body inline in the dialog.
+- Cancel closes the dialog without taking action.
+- All 5 tests pass (render, dialog open, confirm+refresh, cancel, error display).
+
+**All tasks complete.** Delete button is wired into the reservations table with eligibility gating. Manual Stripe refund guide at `docs/admin/stripe-manual-refund.md`.
+
 ### Known issues / admin UX backlog (see TODOS.md for full details)
 - **Email ordering:** Processing email occasionally arrives after the confirmation email — both are sent correctly but Gmail delivery is async/non-deterministic. Not a bug, just a UX quirk to be aware of.
-- **Delete unpaid reservations:** No way to remove `reserved_unpaid` rows from admin dashboard. Accumulates test/abandoned checkouts.
+- **Delete reservations:** ✅ Fully implemented. Admins can delete `reserved_unpaid`, `cancelled`, or past-date paid reservations from the dashboard via trash icon + confirmation dialog.
 - **Pagination:** Reservations list loads all rows. Needs pagination before real booking volume.
 - **Package assignment hardening:** Package dropdowns now filter busy units in the UI, but the RPC still does not enforce overlap conflicts against other active reservations at the database level. Current protection is UI + duplicate payload rejection + slot preservation.
 - **Save/Edit button for unit assignment:** Dropdowns auto-save on change. Should require explicit Save to prevent misclick accidents.
@@ -283,7 +305,9 @@ Email code is fully built and wired. It silently no-ops until these env vars are
 | `app/api/checkout/route.ts` | Checkout dispatch — auth + `confirmation_email` override, then dispatches by `reservation_type` |
 | `app/admin/events/` | Admin event management UI |
 | `app/admin/reservations/AssignUnitDropdown.tsx` | Unit assignment dropdown (client component) |
+| `app/admin/reservations/DeleteReservationButton.tsx` | Delete button with confirmation dialog (client component) |
 | `app/api/admin/reservations/[id]/assign/route.ts` | PATCH endpoint for unit assignment |
+| `app/api/admin/reservations/[id]/route.ts` | DELETE endpoint for removing a reservation and freeing units |
 | `docs/superpowers/plans/2026-03-23-purchase-and-multi-unit-assignment.md` | CEO-reviewed plan for Track C (purchase + multi-unit) — includes all amendments |
 | `docs/superpowers/plans/2026-03-24-p1-blockers-assignment-shipping.md` | Corrected execution plan for the current P1 blocker patch |
 | `docs/superpowers/plans/2026-03-24-p1-blockers-assignment-shipping-codex-review.md` | Codex review of the original March 24 draft; explains why the first version was too narrow on assignment and too broad on shipping |

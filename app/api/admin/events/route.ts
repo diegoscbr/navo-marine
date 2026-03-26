@@ -71,12 +71,15 @@ export async function POST(req: NextRequest) {
     ) + 1,
   )
 
-  const { data: products } = await supabaseAdmin
+  const { data: products, error: productsError } = await supabaseAdmin
     .from('products')
     .select('id, price_per_day_cents')
     .eq('category', 'individual_rental')
 
-  if (products && products.length > 0) {
+  let linkWarning: string | undefined
+  if (productsError) {
+    linkWarning = `Failed to query products: ${productsError.message}`
+  } else if (products && products.length > 0) {
     const allocations = products.map((p: { id: string; price_per_day_cents: number | null }) => ({
       event_id: data.id,
       product_id: p.id,
@@ -88,8 +91,11 @@ export async function POST(req: NextRequest) {
       rental_price_per_day_cents: p.price_per_day_cents ?? null,
     }))
 
-    await supabaseAdmin.from('rental_event_products').insert(allocations)
+    const { error: linkError } = await supabaseAdmin.from('rental_event_products').insert(allocations)
+    if (linkError) {
+      linkWarning = `Event created but product linking failed: ${linkError.message}`
+    }
   }
 
-  return NextResponse.json({ event: data }, { status: 201 })
+  return NextResponse.json({ event: data, ...(linkWarning ? { linkWarning } : {}) }, { status: 201 })
 }

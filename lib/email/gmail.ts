@@ -17,11 +17,14 @@ function getAuth() {
   })
 }
 
+const ADMIN_BCC = 'info@navomarine.com'
+
 function makeRaw(to: string, subject: string, htmlBody: string): string {
   const from = process.env.GMAIL_FROM_ADDRESS!
   const message = [
     `From: NAVO Marine <${from}>`,
     `To: ${to}`,
+    `Bcc: ${ADMIN_BCC}`,
     `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
     'MIME-Version: 1.0',
     'Content-Type: text/html; charset=UTF-8',

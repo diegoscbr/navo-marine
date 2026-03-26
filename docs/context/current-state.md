@@ -1,7 +1,7 @@
 # Current State — Resume Context
 
 > **For Claude:** Read this file at the start of any session to get full project context without re-explanation.
-> Last updated: 2026-03-24 (session 9)
+> Last updated: 2026-03-26 (session 12 migration-access handoff)
 
 ---
 
@@ -10,15 +10,15 @@
 **Active branch:** `dev` (staging on Vercel)
 **Main is prod.** All feature work merges to `dev`, then `dev` → `main` when ready to ship.
 
-**258 unit tests passing.** Build is green.
+**Targeted blocker tests are passing locally.** Repo-wide `npm test` and `npm run lint` currently fail on unrelated `.agents/skills/gstack` and `everything-claude-code` files that are outside the NAVO blocker changes.
 
 **Staging E2E: PASSED.** Both emails (pending + confirmed) arriving clean. Webhook firing — reservations flip to `reserved_paid`. Admin portal confirmed correct.
 
-**PR open:** `dev` → `main` — ready to merge. One P1 gap found post-staging: rental flows don't collect shipping address (see TODOS.md).
+**PR open:** `dev` → `main` — still not clear to merge yet. The blocker patch has now been implemented locally, but staging verification has not been rerun yet. See `docs/superpowers/plans/2026-03-24-p1-blockers-assignment-shipping.md` for the corrected execution plan and `docs/superpowers/plans/2026-03-24-p1-blockers-assignment-shipping-codex-review.md` for the original critique.
 
 ### Remaining before launch
-1. **[P1] Bug: Package unit assignment fails** — "Failed to save assignment" error on package reservations in admin. `assign_reservation_units()` RPC returning error — likely a double-booking conflict. Check Vercel logs for the exact DB error. See TODOS.md.
-2. **[P1] Shipping address on rental flows** — `/reserve` (rental-event + rental-custom) doesn't collect a ship-to address. Add `shipping_address_collection` to Stripe session in both handlers. See TODOS.md.
+1. **[P1] Apply migration 009 + verify package assignment on staging** — local code now passes array payloads, preserves package slot rows in the new migration, and filters package dropdowns. `supabase` CLI and `psql` are installed locally, but `supabase link --project-ref fdjuhjadjqkpqnpxgmue` is currently blocked by Supabase platform access control on the logged-in account. Still need to apply `supabase/migrations/009_reservation_units_slot_integrity.sql` using either the correct Supabase org account, `supabase db push --db-url`, or the dashboard SQL editor, then deploy `dev` and re-test an actual package assignment in admin.
+2. **[P1] Verify rental shipping capture on staging** — `rental_event` and `rental_custom` now request `shipping_address_collection`, and webhook fulfillment now stores `session.collected_information.shipping_details` into `orders.shipping_address`. Still need a live Stripe test on `/reserve` to verify the form appears and the order row captures the address.
 3. **Merge PR** `dev` → `main`
 4. **Production webhook** — after merging, create Stripe webhook endpoint for `https://navomarine.com/api/webhooks/stripe`, copy signing secret, set `STRIPE_WEBHOOK_SECRET` on Vercel production, redeploy.
 5. **Production Gmail env vars** — confirm `GMAIL_SERVICE_ACCOUNT_KEY` + `GMAIL_FROM_ADDRESS` set on Vercel production (main branch).
@@ -27,8 +27,44 @@
 - **Email ordering:** Processing email occasionally arrives after the confirmation email — both are sent correctly but Gmail delivery is async/non-deterministic. Not a bug, just a UX quirk to be aware of.
 - **Delete unpaid reservations:** No way to remove `reserved_unpaid` rows from admin dashboard. Accumulates test/abandoned checkouts.
 - **Pagination:** Reservations list loads all rows. Needs pagination before real booking volume.
-- **Double-booking prevention:** Unit availability filtering doesn't cover package dropdowns — admin can assign same unit to two reservations.
+- **Package assignment hardening:** Package dropdowns now filter busy units in the UI, but the RPC still does not enforce overlap conflicts against other active reservations at the database level. Current protection is UI + duplicate payload rejection + slot preservation.
 - **Save/Edit button for unit assignment:** Dropdowns auto-save on change. Should require explicit Save to prevent misclick accidents.
+
+### Session 10 review notes
+- **Plan reviewed:** `docs/superpowers/plans/2026-03-24-p1-blockers-assignment-shipping.md`
+- **Review artifact:** `docs/superpowers/plans/2026-03-24-p1-blockers-assignment-shipping-codex-review.md`
+- **Status:** Not cleared as written.
+- **Main finding 1:** `assign-units` does have a real double-serialization bug, but fixing only that is not enough.
+- **Main finding 2:** package assignment currently destroys `reservation_units` placeholder rows and recreates assigned rows in a way that can drop date-based fleet accounting and unassigned required capacity.
+- **Main finding 3:** the shipping blocker is rentals-only in current repo context; the draft plan expands it into an all-checkout policy change without explicit product sign-off.
+- **Main finding 4:** if shipping data matters operationally, webhook fulfillment still does not persist Stripe shipping details to `orders.shipping_address`.
+
+### Session 11 implementation notes
+- **Plan corrected:** `docs/superpowers/plans/2026-03-24-p1-blockers-assignment-shipping.md` was rewritten to match `current-state`, the March 23 reviewed plan, and the Codex critique. Shipping scope stays limited to rentals; `regatta_package` remains unchanged.
+- **Assignment route:** `app/api/admin/reservations/[id]/assign-units/route.ts` now passes the RPC payload as an array instead of `JSON.stringify(...)` and rejects duplicate unit IDs in the same payload.
+- **Slot preservation:** `supabase/migrations/009_reservation_units_slot_integrity.sql` normalizes legacy `reservation_units.quantity > 1` rows to one row per physical slot and replaces `assign_reservation_units()` so assignment updates slot rows in place instead of deleting dates / outstanding capacity.
+- **Package inventory writes:** `lib/db/packages.ts` now inserts one `reservation_units` row per physical slot, and availability sums `quantity` so legacy rows do not undercount before migration 009 is applied.
+- **Package assignment UI:** `app/admin/reservations/page.tsx` now filters package units through `availableUnitsForReservation()`, and `PackageUnitAssignment.tsx` hides sibling-selected Atlas 2 units from the other Atlas 2 dropdowns.
+- **Rental shipping:** `lib/checkout/handlers/rental-event.ts` and `lib/checkout/handlers/rental-custom.ts` now include `shipping_address_collection`. `regatta_package` was intentionally left alone.
+- **Webhook shipping persistence:** `lib/stripe/webhook.ts` now maps `session.collected_information.shipping_details` into `orders.shipping_address`.
+- **Local verification passed:**
+  - `npx jest --runTestsByPath __tests__/api/admin/assign-units.test.ts --no-coverage`
+  - `npx jest --runTestsByPath __tests__/lib/db/packages.test.ts --no-coverage`
+  - `npx jest --runTestsByPath __tests__/components/admin/PackageUnitAssignment.test.tsx --no-coverage`
+  - `npx jest --runTestsByPath __tests__/lib/checkout/handlers/rental-event.test.ts __tests__/lib/checkout/handlers/rental-custom.test.ts --no-coverage`
+  - `npx jest --runTestsByPath __tests__/lib/stripe/webhook.test.ts __tests__/api/webhooks/stripe.test.ts --no-coverage`
+  - `npx eslint 'app/api/admin/reservations/[id]/assign-units/route.ts' app/admin/reservations/page.tsx app/admin/reservations/PackageUnitAssignment.tsx lib/db/packages.ts lib/checkout/handlers/rental-event.ts lib/checkout/handlers/rental-custom.ts lib/stripe/webhook.ts __tests__/api/admin/assign-units.test.ts __tests__/components/admin/PackageUnitAssignment.test.tsx __tests__/lib/db/packages.test.ts __tests__/lib/checkout/handlers/rental-event.test.ts __tests__/lib/checkout/handlers/rental-custom.test.ts __tests__/lib/stripe/webhook.test.ts`
+- **Repo-wide verification caveat:** `npm test` and `npm run lint` still fail because the repo contains unrelated `.agents/skills/gstack` Bun/ESM suites and external lint debt outside the NAVO app changes.
+- **Migration handoff for next session:** `supabase` CLI is installed locally, and session 12 later confirmed both `supabase` and `psql` are available from repo root.
+- **Direct-apply prerequisites:** before asking the next session to run migration 009 directly, ensure `supabase login` is complete, have the dev/staging DB password available, and either authenticate with the correct Supabase org account for `supabase link` or be ready to use `supabase db push --db-url`.
+- **Do not duplicate apply paths:** if the next session is going to drive the migration via CLI, do not also paste `009_reservation_units_slot_integrity.sql` into the SQL editor manually.
+
+### Session 12 migration-access notes
+- **Local tooling confirmed:** on 2026-03-26, user confirmed `supabase --version` = `2.78.1` and `psql --version` = `18.3` from repo root.
+- **Env parse issue found:** `supabase link` initially failed because `.env.local` contained a malformed `NOREPLY_PASSWORD` line with invalid single-quote syntax. User fixed the local env formatting outside this doc.
+- **Current blocker:** `supabase link --project-ref fdjuhjadjqkpqnpxgmue` now fails with a Supabase platform access-control error: the currently authenticated CLI account does not have permission to retrieve remote project status for that project.
+- **Recommended apply paths:** either re-authenticate the CLI with the correct Supabase owner/admin account and retry `supabase link`, or skip `link` and apply migration 009 via `supabase db push --db-url` or the dashboard SQL editor.
+- **Still pending after DB apply:** re-run the two staging smokes: package assignment in admin and rental shipping capture on `/reserve`.
 
 ### Staging URL
 `https://navo-marine-git-dev-diegoscbrs-projects.vercel.app`
@@ -249,6 +285,9 @@ Email code is fully built and wired. It silently no-ops until these env vars are
 | `app/admin/reservations/AssignUnitDropdown.tsx` | Unit assignment dropdown (client component) |
 | `app/api/admin/reservations/[id]/assign/route.ts` | PATCH endpoint for unit assignment |
 | `docs/superpowers/plans/2026-03-23-purchase-and-multi-unit-assignment.md` | CEO-reviewed plan for Track C (purchase + multi-unit) — includes all amendments |
+| `docs/superpowers/plans/2026-03-24-p1-blockers-assignment-shipping.md` | Corrected execution plan for the current P1 blocker patch |
+| `docs/superpowers/plans/2026-03-24-p1-blockers-assignment-shipping-codex-review.md` | Codex review of the original March 24 draft; explains why the first version was too narrow on assignment and too broad on shipping |
+| `supabase/migrations/009_reservation_units_slot_integrity.sql` | Follow-up migration: split aggregated package slots, preserve dates, and replace the assignment RPC |
 
 ---
 
@@ -262,4 +301,4 @@ Email code is fully built and wired. It silently no-ops until these env vars are
 - For rental-event checkout, `getEventPricing()` fetches only the event date range. Per-day pricing comes from `rental_event_products.rental_price_per_day_cents` when present; otherwise use `rental_price_cents`.
 - On `/reserve`, submit the selected event allocation `product_id`, not just the `ATLAS2_PRODUCT_ID` fallback.
 - Next.js 16 App Router: dynamic route `params` is a `Promise<{ id: string }>` — must be awaited.
-- **Shipping address rule:** All `reservation_type: 'purchase'` Stripe sessions MUST include `shipping_address_collection: { allowed_countries: ['US'] }`. Rentals/packages do not need it.
+- **Shipping address rule:** `purchase`, `rental_event`, and `rental_custom` Stripe sessions MUST include `shipping_address_collection: { allowed_countries: ['US'] }`. `regatta_package` does not currently collect shipping.

@@ -27,7 +27,9 @@ jest.mock('@/lib/utils/dates', () => ({
 
 import { getEventProduct, getEventPricing } from '@/lib/db/events'
 import { checkEventAvailability } from '@/lib/db/availability'
+import { supabaseAdmin } from '@/lib/db/client'
 import { stripe } from '@/lib/stripe/client'
+import { daysBetween } from '@/lib/utils/dates'
 
 const mockGetEventProduct = getEventProduct as jest.Mock
 const mockGetEventPricing = getEventPricing as jest.Mock
@@ -81,10 +83,8 @@ describe('handleRentalEvent', () => {
       select: jest.fn().mockReturnThis(),
       single: jest.fn().mockResolvedValue({ data: { id: 'res-uuid', status: 'reserved_unpaid', expires_at: '' }, error: null }),
     }
-    const { supabaseAdmin } = require('@/lib/db/client')
     ;(supabaseAdmin.from as jest.Mock).mockReturnValue(insertChain)
 
-    const { daysBetween } = require('@/lib/utils/dates')
     ;(daysBetween as jest.Mock).mockReturnValue(3)
 
     const { handleRentalEvent } = await import('@/lib/checkout/handlers/rental-event')
@@ -99,6 +99,7 @@ describe('handleRentalEvent', () => {
     // extra_days=2, event_days=3 → 5 days × $35 = $175
     expect(mockStripeCreate).toHaveBeenCalledWith(
       expect.objectContaining({
+        shipping_address_collection: { allowed_countries: ['US'] },
         line_items: [expect.objectContaining({ price_data: expect.objectContaining({ unit_amount: 17500 }) })],
       }),
     )

@@ -19,8 +19,37 @@ npm run test:e2e     # Playwright E2E tests
 ```
 
 **Database (Supabase):**
-- Migrations live in `supabase/migrations/` — apply via Supabase MCP `apply_migration`
+- Migrations live in `supabase/migrations/`
+- Preferred apply path when MCP is available: Supabase MCP `apply_migration`
+- If MCP is unavailable or `supabase link` is blocked by platform access control, use `supabase db push --db-url` or the Supabase dashboard SQL editor against the target DB
 - Supabase dashboard: https://supabase.com/dashboard/project/fdjuhjadjqkpqnpxgmue
+
+## Current Blocker State
+
+- Package assignment blocker fix is implemented locally across the admin assign-units route, package inventory writes, package assignment UI, and migration `009_reservation_units_slot_integrity.sql`.
+- Shipping scope is intentionally limited to `reservation_type: 'rental_event'` and `reservation_type: 'rental_custom'` on `/reserve`. `regatta_package` was explicitly left unchanged.
+- Stripe webhook shipping persistence now reads `session.collected_information.shipping_details`, not `session.shipping_details`.
+- Migration `009` is not confirmed applied to the dev/staging database yet. Current known blocker: `supabase link --project-ref fdjuhjadjqkpqnpxgmue` is failing on the logged-in CLI account due to Supabase platform access-control privileges.
+
+## Current Review Files
+
+- `docs/context/current-state.md` — source of truth for launch blockers and handoff state
+- `docs/superpowers/plans/2026-03-24-p1-blockers-assignment-shipping.md` — corrected blocker execution plan
+- `docs/superpowers/plans/2026-03-24-p1-blockers-assignment-shipping-codex-review.md` — critique that explains why the plan was rewritten
+- `supabase/migrations/009_reservation_units_slot_integrity.sql` — slot-preserving migration and `assign_reservation_units()` replacement
+- `app/api/admin/reservations/[id]/assign-units/route.ts` — array payload fix + duplicate unit rejection
+- `lib/db/packages.ts` — per-slot `reservation_units` writes and quantity-aware availability
+- `app/admin/reservations/page.tsx` — package unit filtering via `availableUnitsForReservation()`
+- `app/admin/reservations/PackageUnitAssignment.tsx` — sibling Atlas 2 dropdown filtering
+- `lib/checkout/handlers/rental-event.ts` — rental shipping collection
+- `lib/checkout/handlers/rental-custom.ts` — rental shipping collection
+- `lib/stripe/webhook.ts` — shipping persistence into `orders.shipping_address`
+- `__tests__/api/admin/assign-units.test.ts` — assign-units route coverage
+- `__tests__/lib/db/packages.test.ts` — package inventory and slot-write coverage
+- `__tests__/components/admin/PackageUnitAssignment.test.tsx` — package assignment UI coverage
+- `__tests__/lib/checkout/handlers/rental-event.test.ts` — rental-event shipping coverage
+- `__tests__/lib/checkout/handlers/rental-custom.test.ts` — rental-custom shipping coverage
+- `__tests__/lib/stripe/webhook.test.ts` — webhook shipping persistence coverage
 
 ## Architecture
 
@@ -64,7 +93,7 @@ Full CRUD at `/admin/products/*`. The `ProductForm` component handles a complex 
 
 ### Checkout — Shipping Address Rule
 
-**CRITICAL:** Any Stripe checkout session for `reservation_type: 'purchase'` (physical hardware shipped to customer) MUST include `shipping_address_collection: { allowed_countries: ['US'] }`. Rental and package flows (on-site use, units returned) do NOT need it. A paid purchase order without a ship-to address cannot be fulfilled.
+**CRITICAL:** Any Stripe checkout session for `reservation_type: 'purchase'`, `reservation_type: 'rental_event'`, or `reservation_type: 'rental_custom'` MUST include `shipping_address_collection: { allowed_countries: ['US'] }`. `regatta_package` does not currently collect shipping as part of the approved scope. A paid order that requires shipment without a ship-to address cannot be fulfilled.
 
 ### Storefront vs Admin Products
 

@@ -6,9 +6,9 @@ jest.mock('@/lib/db/client', () => ({
   supabaseAdmin: { from: jest.fn() },
 }))
 
-const { supabaseAdmin } = require('@/lib/db/client') as {
-  supabaseAdmin: { from: jest.Mock }
-}
+import { supabaseAdmin } from '@/lib/db/client'
+
+const mockSupabase = supabaseAdmin as unknown as { from: jest.Mock }
 
 function makeChain(overrides: Record<string, unknown> = {}) {
   const chain: Record<string, jest.Mock> = {
@@ -37,7 +37,7 @@ describe('checkPackageAvailability', () => {
     const chain = makeChain({
       gte: jest.fn().mockResolvedValue({ count: 0, error: null }),
     })
-    ;(supabaseAdmin.from as jest.Mock).mockReturnValue(chain)
+    ;(mockSupabase.from as jest.Mock).mockReturnValue(chain)
     const { checkPackageAvailability } = await import('@/lib/db/packages')
     const result = await checkPackageAvailability('product-uuid', '2026-04-01', '2026-04-05', 1)
     expect(result.available).toBe(true)
@@ -47,7 +47,7 @@ describe('checkPackageAvailability', () => {
     const chain = makeChain({
       gte: jest.fn().mockResolvedValue({ count: 1, error: null }),
     })
-    ;(supabaseAdmin.from as jest.Mock).mockReturnValue(chain)
+    ;(mockSupabase.from as jest.Mock).mockReturnValue(chain)
     const { checkPackageAvailability } = await import('@/lib/db/packages')
     const result = await checkPackageAvailability('product-uuid', '2026-04-01', '2026-04-05', 1)
     expect(result.available).toBe(false)
@@ -57,7 +57,7 @@ describe('checkPackageAvailability', () => {
     const chain = makeChain({
       gte: jest.fn().mockResolvedValue({ count: null, error: { message: 'DB error' } }),
     })
-    ;(supabaseAdmin.from as jest.Mock).mockReturnValue(chain)
+    ;(mockSupabase.from as jest.Mock).mockReturnValue(chain)
     const { checkPackageAvailability } = await import('@/lib/db/packages')
     await expect(
       checkPackageAvailability('product-uuid', '2026-04-01', '2026-04-05', 1),
@@ -82,7 +82,7 @@ describe('getPackageProductById', () => {
     const chain = makeChain({
       single: jest.fn().mockResolvedValue({ data: mockProduct, error: null }),
     })
-    ;(supabaseAdmin.from as jest.Mock).mockReturnValue(chain)
+    ;(mockSupabase.from as jest.Mock).mockReturnValue(chain)
     const { getPackageProductById } = await import('@/lib/db/packages')
     const result = await getPackageProductById('uuid')
     expect(result).toEqual(mockProduct)
@@ -104,7 +104,7 @@ describe('getPackageProductById', () => {
     const chain = makeChain({
       single: jest.fn().mockResolvedValue({ data: mockProduct, error: null }),
     })
-    ;(supabaseAdmin.from as jest.Mock).mockReturnValue(chain)
+    ;(mockSupabase.from as jest.Mock).mockReturnValue(chain)
     const { getPackageProductById } = await import('@/lib/db/packages')
     const result = await getPackageProductById('uuid')
     expect(result).toBeNull()
@@ -114,7 +114,7 @@ describe('getPackageProductById', () => {
     const chain = makeChain({
       single: jest.fn().mockResolvedValue({ data: null, error: { code: 'PGRST116' } }),
     })
-    ;(supabaseAdmin.from as jest.Mock).mockReturnValue(chain)
+    ;(mockSupabase.from as jest.Mock).mockReturnValue(chain)
     const { getPackageProductById } = await import('@/lib/db/packages')
     const result = await getPackageProductById('nonexistent')
     expect(result).toBeNull()
@@ -126,11 +126,11 @@ describe('checkMultiUnitAvailability', () => {
     const calls = [
       { count: 10, error: null }, // atlas2 total
       { count: 2, error: null },  // tablet total
-      { count: 0, error: null },  // atlas2 allocated
-      { count: 0, error: null },  // tablet allocated
+      { data: [], error: null },  // atlas2 allocated
+      { data: [], error: null },  // tablet allocated
     ]
     let i = 0
-    ;(supabaseAdmin.from as jest.Mock).mockImplementation(() => {
+    ;(mockSupabase.from as jest.Mock).mockImplementation(() => {
       const result = calls[i++]
       return makeChain({ gte: jest.fn().mockResolvedValue(result) })
     })
@@ -144,10 +144,10 @@ describe('checkMultiUnitAvailability', () => {
     const calls = [
       { count: 3, error: null },  // only 3 atlas2 (need 5)
       { count: 2, error: null },
-      { count: 0, error: null },
+      { data: [], error: null },
     ]
     let i = 0
-    ;(supabaseAdmin.from as jest.Mock).mockImplementation(() => {
+    ;(mockSupabase.from as jest.Mock).mockImplementation(() => {
       const result = calls[i++]
       return makeChain({ gte: jest.fn().mockResolvedValue(result) })
     })
@@ -159,7 +159,7 @@ describe('checkMultiUnitAvailability', () => {
   })
 
   it('throws if DB returns error on unit count', async () => {
-    ;(supabaseAdmin.from as jest.Mock).mockImplementation(() =>
+    ;(mockSupabase.from as jest.Mock).mockImplementation(() =>
       makeChain({ gte: jest.fn().mockResolvedValue({ count: null, error: { message: 'DB error' } }) }),
     )
 
@@ -167,6 +167,49 @@ describe('checkMultiUnitAvailability', () => {
     await expect(
       checkMultiUnitAvailability('product-uuid', '2027-06-01', '2027-06-05', 5, true),
     ).rejects.toThrow('checkMultiUnitAvailability')
+  })
+})
+
+describe('insertReservationUnits', () => {
+  it('inserts one reservation_units row per physical slot', async () => {
+    const productChain = makeChain({
+      single: jest.fn().mockResolvedValue({
+        data: { atlas2_units_required: 2, tablet_required: true },
+        error: null,
+      }),
+    })
+    const insert = jest.fn().mockResolvedValue({ error: null })
+
+    ;(mockSupabase.from as jest.Mock)
+      .mockReturnValueOnce(productChain)
+      .mockReturnValueOnce({ insert })
+
+    const { insertReservationUnits } = await import('@/lib/db/packages')
+    await insertReservationUnits('res-1', 'prod-1', '2027-06-01', '2027-06-05')
+
+    expect(insert).toHaveBeenCalledWith([
+      {
+        reservation_id: 'res-1',
+        unit_type: 'atlas2',
+        quantity: 1,
+        start_date: '2027-06-01',
+        end_date: '2027-06-05',
+      },
+      {
+        reservation_id: 'res-1',
+        unit_type: 'atlas2',
+        quantity: 1,
+        start_date: '2027-06-01',
+        end_date: '2027-06-05',
+      },
+      {
+        reservation_id: 'res-1',
+        unit_type: 'tablet',
+        quantity: 1,
+        start_date: '2027-06-01',
+        end_date: '2027-06-05',
+      },
+    ])
   })
 })
 
@@ -187,7 +230,7 @@ describe('getPackageProduct', () => {
     const chain = makeChain({
       single: jest.fn().mockResolvedValue({ data: mockProduct, error: null }),
     })
-    ;(supabaseAdmin.from as jest.Mock).mockReturnValue(chain)
+    ;(mockSupabase.from as jest.Mock).mockReturnValue(chain)
 
     const { getPackageProduct } = await import('@/lib/db/packages')
     const product = await getPackageProduct('race-committee-package')
@@ -199,7 +242,7 @@ describe('getPackageProduct', () => {
     const chain = makeChain({
       single: jest.fn().mockResolvedValue({ data: null, error: { code: 'PGRST116' } }),
     })
-    ;(supabaseAdmin.from as jest.Mock).mockReturnValue(chain)
+    ;(mockSupabase.from as jest.Mock).mockReturnValue(chain)
 
     const { getPackageProduct } = await import('@/lib/db/packages')
     const product = await getPackageProduct('nonexistent-slug')

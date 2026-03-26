@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PackageUnitAssignment } from '@/app/admin/reservations/PackageUnitAssignment'
 
@@ -71,7 +71,35 @@ it('calls POST assign-units and refreshes on selection', async () => {
       '/api/admin/reservations/res-1/assign-units',
       expect.objectContaining({ method: 'POST' }),
     )
+    expect(JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)).toEqual({
+      assignments: [
+        { unit_type: 'tablet', unit_id: 't1' },
+        { unit_type: 'atlas2', unit_id: null },
+      ],
+    })
     expect(mockRefresh).toHaveBeenCalledTimes(1)
+  })
+})
+
+it('filters sibling-selected atlas2 units out of other atlas2 dropdowns', async () => {
+  const user = userEvent.setup()
+  ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({ ok: true }) })
+
+  render(
+    <PackageUnitAssignment
+      reservationId="res-1"
+      tabletUnits={[]}
+      atlas2Units={atlas2Units}
+      atlas2Count={2}
+      currentAssignments={[]}
+    />,
+  )
+
+  const selects = screen.getAllByRole('combobox')
+  await user.selectOptions(selects[0], 'a1')
+
+  await waitFor(() => {
+    expect(within(selects[1]).queryByText('NAVO-001')).not.toBeInTheDocument()
   })
 })
 

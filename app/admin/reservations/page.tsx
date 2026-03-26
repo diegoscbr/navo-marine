@@ -63,6 +63,11 @@ export default async function AdminReservationsPage() {
 
   const rows = (reservations ?? []) as unknown as Reservation[]
   const unitList = (units ?? []) as Unit[]
+  const reservationRowsForAvailability = rows.map((r) => ({
+    id: r.id,
+    unit_id: r.unit_id,
+    status: r.status,
+  }))
 
   // Fetch reservation_units for package assignment display
   const reservationIds = rows.map((r) => r.id)
@@ -78,11 +83,18 @@ export default async function AdminReservationsPage() {
   function availableUnitsFor(reservationId: string, currentUnitId: string | null) {
     return availableUnitsForReservation(
       unitList,
-      rows.map((r) => ({ id: r.id, unit_id: r.unit_id, status: r.status })),
+      reservationRowsForAvailability,
       reservationId,
       currentUnitId,
       reservationUnits.map((ru) => ({ reservation_id: ru.reservation_id, unit_id: ru.unit_id })),
-    )
+    ) as Unit[]
+  }
+
+  function availableUnitsForType(
+    reservationId: string,
+    unitType: Unit['unit_type'],
+  ): Unit[] {
+    return availableUnitsFor(reservationId, null).filter((u) => u.unit_type === unitType)
   }
 
   // Count by status
@@ -163,8 +175,8 @@ export default async function AdminReservationsPage() {
                       {isPackage ? (
                         <PackageUnitAssignment
                           reservationId={r.id}
-                          tabletUnits={r.products?.tablet_required ? unitList.filter((u) => u.unit_type === 'tablet') : []}
-                          atlas2Units={(r.products?.atlas2_units_required ?? 0) > 0 ? unitList.filter((u) => u.unit_type === 'atlas2') : []}
+                          tabletUnits={r.products?.tablet_required ? availableUnitsForType(r.id, 'tablet') : []}
+                          atlas2Units={(r.products?.atlas2_units_required ?? 0) > 0 ? availableUnitsForType(r.id, 'atlas2') : []}
                           atlas2Count={r.products?.atlas2_units_required ?? 0}
                           currentAssignments={currentAssignments}
                         />

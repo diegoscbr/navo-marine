@@ -16,7 +16,7 @@ import { sendEmail } from '@/lib/email/gmail'
 import { bookingConfirmed } from '@/lib/email/templates'
 import type Stripe from 'stripe'
 
-const mockSupabase = supabaseAdmin as { from: jest.Mock }
+const mockSupabase = supabaseAdmin as unknown as { from: jest.Mock }
 const mockSendEmail = sendEmail as jest.Mock
 const mockBookingConfirmed = bookingConfirmed as jest.Mock
 
@@ -134,5 +134,63 @@ describe('fulfillCheckoutSession', () => {
 
     const result = await fulfillCheckoutSession(makeSession())
     expect(result.ok).toBe(false)
+  })
+
+  it('stores shipping address on the created order when Stripe provides it', async () => {
+    let callIndex = 0
+    const orderInsert = jest.fn().mockReturnThis()
+
+    mockSupabase.from.mockImplementation((table: string) => {
+      if (table === 'reservations' && callIndex === 0) {
+        callIndex++
+        return makeChain({ single: jest.fn().mockResolvedValue({ data: mockReservation, error: null }) })
+      }
+      if (table === 'reservations' && callIndex === 1) {
+        callIndex++
+        return makeChain({ single: jest.fn().mockResolvedValue({ data: null, error: null }) })
+      }
+      if (table === 'orders') {
+        return makeChain({
+          insert: orderInsert,
+          single: jest.fn().mockResolvedValue({ data: mockOrder, error: null }),
+        })
+      }
+      if (table === 'products') {
+        return makeChain({ single: jest.fn().mockResolvedValue({ data: mockProduct, error: null }) })
+      }
+      return makeChain()
+    })
+
+    await fulfillCheckoutSession(makeSession({
+      collected_information: {
+        business_name: null,
+        individual_name: null,
+        shipping_details: {
+          name: 'Sailor Test',
+          address: {
+            line1: '123 Harbor St',
+            line2: 'Suite 4',
+            city: 'Chicago',
+            state: 'IL',
+            postal_code: '60601',
+            country: 'US',
+          },
+        },
+      },
+    }))
+
+    expect(orderInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        shipping_address: {
+          name: 'Sailor Test',
+          line1: '123 Harbor St',
+          line2: 'Suite 4',
+          city: 'Chicago',
+          state: 'IL',
+          zip: '60601',
+          country: 'US',
+        },
+      }),
+    )
   })
 })

@@ -62,7 +62,8 @@ export async function checkPackageAvailability(
  * Check that enough physical Atlas 2 and tablet units exist for a multi-unit
  * regatta package over the requested date range.
  *
- * Makes 4 count queries, each terminating with `.gte()`:
+ * Makes 2 fleet count queries, then 1-2 reservation_units lookups whose
+ * quantities are summed for overlap accounting:
  *   1. Total available Atlas 2 units in the fleet
  *   2. Total available tablet units in the fleet
  *   3. Atlas 2 units already allocated for the date range
@@ -99,16 +100,18 @@ export async function checkMultiUnitAvailability(
   // NOTE: This query does not filter by reservation status. To prevent cancelled reservations
   // from blocking availability, reservation_units rows must be deleted when a reservation
   // is cancelled. Tracked in TODOS.md Phase 5 cleanup.
-  const { count: atlas2Allocated, error: allocErr } = await supabaseAdmin
+  const { data: atlas2AllocatedRows, error: allocErr } = await supabaseAdmin
     .from('reservation_units')
-    .select('id', { count: 'exact', head: true })
+    .select('quantity')
     .eq('unit_type', 'atlas2')
     .lte('start_date', endDate)
     .gte('end_date', startDate)
 
   if (allocErr) throw new Error(`checkMultiUnitAvailability: ${allocErr.message}`)
 
-  const atlas2Available = (atlas2Total ?? 0) - (atlas2Allocated ?? 0)
+  const atlas2Allocated = ((atlas2AllocatedRows ?? []) as { quantity: number | null }[])
+    .reduce((sum, row) => sum + (row.quantity ?? 1), 0)
+  const atlas2Available = (atlas2Total ?? 0) - atlas2Allocated
 
   if (atlas2Available < atlas2Required) {
     return {
@@ -122,14 +125,15 @@ export async function checkMultiUnitAvailability(
   // deleted on cancellation to avoid false unavailability.
   let tabletAllocated = 0
   if (tabletRequired) {
-    const { count: tabAlloc, error: tabAllocErr } = await supabaseAdmin
+    const { data: tabAllocRows, error: tabAllocErr } = await supabaseAdmin
       .from('reservation_units')
-      .select('id', { count: 'exact', head: true })
+      .select('quantity')
       .eq('unit_type', 'tablet')
       .lte('start_date', endDate)
       .gte('end_date', startDate)
     if (tabAllocErr) throw new Error(`checkMultiUnitAvailability: ${tabAllocErr.message}`)
-    tabletAllocated = tabAlloc ?? 0
+    tabletAllocated = ((tabAllocRows ?? []) as { quantity: number | null }[])
+      .reduce((sum, row) => sum + (row.quantity ?? 1), 0)
   }
 
   if (tabletRequired) {
@@ -147,7 +151,7 @@ export async function checkMultiUnitAvailability(
 /**
  * Insert reservation_units rows for a confirmed reservation.
  * Looks up the product's atlas2_units_required and tablet_required fields,
- * then writes one row per unit type needed.
+ * then writes one row per physical slot needed.
  * Errors are logged but not rethrown — unit tracking is non-blocking.
  */
 export async function insertReservationUnits(
@@ -176,13 +180,15 @@ export async function insertReservationUnits(
   }[] = []
 
   if (product.atlas2_units_required > 0) {
-    rows.push({
-      reservation_id: reservationId,
-      unit_type: 'atlas2',
-      quantity: product.atlas2_units_required,
-      start_date: startDate,
-      end_date: endDate,
-    })
+    rows.push(
+      ...Array.from({ length: product.atlas2_units_required }, () => ({
+        reservation_id: reservationId,
+        unit_type: 'atlas2',
+        quantity: 1,
+        start_date: startDate,
+        end_date: endDate,
+      })),
+    )
   }
 
   if (product.tablet_required) {

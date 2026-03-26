@@ -51,7 +51,7 @@ it('calls rpc and returns 200 on success', async () => {
   expect(body.ok).toBe(true)
   expect(supabaseAdmin.rpc).toHaveBeenCalledWith('assign_reservation_units', {
     p_reservation_id: 'res-1',
-    p_assignments: expect.any(String),
+    p_assignments: [{ unit_type: 'tablet', unit_id: 'u-1' }],
   })
 })
 
@@ -64,6 +64,27 @@ it('returns 200 and calls rpc with empty array when all assignments have null un
     { params: Promise.resolve({ id: 'res-1' }) },
   )
   expect(res.status).toBe(200)
+  expect(supabaseAdmin.rpc).toHaveBeenCalledWith('assign_reservation_units', {
+    p_reservation_id: 'res-1',
+    p_assignments: [],
+  })
+})
+
+it('returns 400 when duplicate unit IDs are submitted', async () => {
+  ;(requireAdmin as jest.Mock).mockResolvedValue({ ok: true, user: {} })
+
+  const res = await POST(
+    makeRequest({
+      assignments: [
+        { unit_type: 'tablet', unit_id: 'u-1' },
+        { unit_type: 'atlas2', unit_id: 'u-1' },
+      ],
+    }),
+    { params: Promise.resolve({ id: 'res-1' }) },
+  )
+
+  expect(res.status).toBe(400)
+  expect(supabaseAdmin.rpc).not.toHaveBeenCalled()
 })
 
 it('returns 500 when rpc returns an error', async () => {

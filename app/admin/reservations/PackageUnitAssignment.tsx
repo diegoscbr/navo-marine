@@ -84,29 +84,40 @@ export function PackageUnitAssignment({
         </div>
       )}
       {atlas2Ids.map((id, i) => (
-        <div key={i} className="flex items-center gap-1">
-          <span className="text-xs text-white/30">
-            Atlas 2{atlas2Count > 1 ? ` (${i + 1})` : ''}:
-          </span>
-          <select
-            value={id ?? ''}
-            onChange={(e) => {
-              const val = e.target.value || null
-              const updated = atlas2Ids.map((v, j) => (j === i ? val : v))
-              setAtlas2Ids(updated)
-              void save(tabletId, updated)
-            }}
-            disabled={loading}
-            className={selectClass}
-          >
-            <option value="">— unassigned —</option>
-            {atlas2Units.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.navo_number}
-              </option>
-            ))}
-          </select>
-        </div>
+        (() => {
+          const siblingSelections = new Set(
+            atlas2Ids.filter((selectedId, selectedIndex) => selectedIndex !== i && selectedId),
+          )
+          const selectableAtlas2Units = atlas2Units.filter(
+            (u) => !siblingSelections.has(u.id) || u.id === id,
+          )
+
+          return (
+            <div key={i} className="flex items-center gap-1">
+              <span className="text-xs text-white/30">
+                Atlas 2{atlas2Count > 1 ? ` (${i + 1})` : ''}:
+              </span>
+              <select
+                value={id ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value || null
+                  const updated = atlas2Ids.map((v, j) => (j === i ? val : v))
+                  setAtlas2Ids(updated)
+                  void save(tabletId, updated)
+                }}
+                disabled={loading}
+                className={selectClass}
+              >
+                <option value="">— unassigned —</option>
+                {selectableAtlas2Units.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.navo_number}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )
+        })()
       ))}
       {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
     </div>

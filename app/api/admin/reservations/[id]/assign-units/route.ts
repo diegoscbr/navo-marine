@@ -35,13 +35,24 @@ export async function POST(
 
   // Filter to only assignments with a unit_id set
   const toAssign = body.assignments
-    .filter((a) => a.unit_id !== null)
+    .filter((a): a is Assignment & { unit_id: string } => a.unit_id !== null)
     .map((a) => ({ unit_type: a.unit_type, unit_id: a.unit_id }))
+
+  const seenUnitIds = new Set<string>()
+  for (const assignment of toAssign) {
+    if (seenUnitIds.has(assignment.unit_id)) {
+      return NextResponse.json(
+        { error: 'Duplicate unit IDs are not allowed' },
+        { status: 400 },
+      )
+    }
+    seenUnitIds.add(assignment.unit_id)
+  }
 
   // Atomic delete+insert via RPC — avoids partial-write if insert fails
   const { error } = await supabaseAdmin.rpc('assign_reservation_units', {
     p_reservation_id: reservationId,
-    p_assignments: JSON.stringify(toAssign),
+    p_assignments: toAssign,
   })
 
   if (error) {

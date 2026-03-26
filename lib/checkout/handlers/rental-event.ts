@@ -65,6 +65,7 @@ export async function handleRentalEvent(
   try {
     stripeSession = await stripe.checkout.sessions.create({
       mode: 'payment',
+      shipping_address_collection: { allowed_countries: ['US'] },
       line_items: [
         {
           price_data: {

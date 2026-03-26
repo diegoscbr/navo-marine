@@ -39,6 +39,21 @@ export async function logStripeEvent(event: Stripe.Event): Promise<void> {
   })
 }
 
+function toShippingAddress(session: Stripe.Checkout.Session) {
+  const details = session.collected_information?.shipping_details
+  if (!details) return null
+
+  return {
+    name: details.name ?? null,
+    line1: details.address?.line1 ?? null,
+    line2: details.address?.line2 ?? null,
+    city: details.address?.city ?? null,
+    state: details.address?.state ?? null,
+    zip: details.address?.postal_code ?? null,
+    country: details.address?.country ?? null,
+  }
+}
+
 // ── Fulfill checkout.session.completed ───────────────────────────────────
 
 export async function fulfillCheckoutSession(
@@ -75,6 +90,7 @@ export async function fulfillCheckoutSession(
 
   // 3. Create order record (before unit update to minimize partial-failure window)
   const orderNumber = generateOrderNumber()
+  const shippingAddress = toShippingAddress(session)
   const { data: order, error: orderErr } = await supabaseAdmin
     .from('orders')
     .insert({
@@ -85,6 +101,7 @@ export async function fulfillCheckoutSession(
         session.customer_email ??
         '',
       reservation_id: (reservation as { id: string }).id,
+      shipping_address: shippingAddress,
       status: 'paid',
       subtotal_cents: (reservation as { total_cents: number }).total_cents,
       tax_cents: 0,

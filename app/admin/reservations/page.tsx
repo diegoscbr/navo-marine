@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/db/client'
 import { AssignUnitDropdown } from './AssignUnitDropdown'
 import { PackageUnitAssignment } from './PackageUnitAssignment'
 import { availableUnitsForReservation } from '@/lib/admin/unit-availability'
+import { DeleteReservationButton } from './DeleteReservationButton'
 
 export const metadata: Metadata = {
   title: 'Reservations | NAVO Admin',
@@ -103,6 +104,17 @@ export default async function AdminReservationsPage() {
     return acc
   }, {})
 
+  function canDelete(r: Reservation): boolean {
+    if (r.status === 'reserved_unpaid' || r.status === 'cancelled') return true
+    if (r.status === 'reserved_paid' || r.status === 'completed') {
+      const now = new Date()
+      now.setHours(0, 0, 0, 0)
+      const endDate = r.end_date ? new Date(r.end_date) : null
+      return endDate !== null && endDate < now
+    }
+    return false
+  }
+
   return (
     <div className="mx-auto max-w-5xl">
       {/* Header */}
@@ -144,6 +156,7 @@ export default async function AdminReservationsPage() {
                 <th className="px-5 py-3">Total</th>
                 <th className="px-5 py-3">Unit</th>
                 <th className="px-5 py-3">Created</th>
+                <th className="px-5 py-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -190,6 +203,15 @@ export default async function AdminReservationsPage() {
                     </td>
                     <td className="px-5 py-3 text-white/40 text-xs">
                       {new Date(r.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-5 py-3">
+                      {canDelete(r) && (
+                        <DeleteReservationButton
+                          reservationId={r.id}
+                          customerEmail={r.customer_email}
+                          reservationType={r.reservation_type}
+                        />
+                      )}
                     </td>
                   </tr>
                 )

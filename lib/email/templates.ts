@@ -12,6 +12,7 @@ type BookingParams = {
 }
 
 type BookingConfirmedParams = BookingParams & { orderId: string }
+type PaymentRequestParams = BookingParams & { paymentUrl: string }
 
 type EmailResult = { to: string; subject: string; html: string }
 
@@ -112,6 +113,60 @@ export function bookingConfirmed(params: BookingConfirmedParams): EmailResult {
   return {
     to,
     subject: `Booking confirmed - ${productName}`,
+    html,
+  }
+}
+
+export function paymentRequest(params: PaymentRequestParams): EmailResult {
+  const { to, reservationId, productName, startDate, endDate, totalCents, paymentUrl } = params
+  const dateRange =
+    startDate && endDate ? `${startDate} – ${endDate}` : 'See booking details'
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<body style="font-family:sans-serif;background:#0B1F2A;color:#fff;padding:40px 20px;margin:0">
+  <div style="max-width:520px;margin:0 auto;background:#0F2C3F;border-radius:12px;padding:40px;border:1px solid rgba(255,255,255,0.1)">
+    <img src="https://navomarine.com/logos/transparent_background_logo.png" alt="NAVO Marine" width="120" style="margin-bottom:32px" />
+    <h1 style="font-size:22px;font-weight:600;margin:0 0 8px">Payment Requested</h1>
+    <p style="color:rgba(255,255,255,0.6);font-size:14px;margin:0 0 32px">A payment link has been created for your reservation. Click below to complete your payment.</p>
+
+    <table style="width:100%;border-collapse:collapse;font-size:14px">
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.08)">
+        <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Product</td>
+        <td style="padding:10px 0;text-align:right">${productName}</td>
+      </tr>
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.08)">
+        <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Dates</td>
+        <td style="padding:10px 0;text-align:right">${dateRange}</td>
+      </tr>
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.08)">
+        <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Total</td>
+        <td style="padding:10px 0;text-align:right;font-weight:600">${formatUSD(totalCents)}</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Reservation ID</td>
+        <td style="padding:10px 0;text-align:right;font-size:12px;color:rgba(255,255,255,0.4)">${reservationId}</td>
+      </tr>
+    </table>
+
+    <div style="text-align:center;margin-top:32px">
+      <a href="${paymentUrl}" style="background:#1E6EFF;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">Complete Your Payment</a>
+    </div>
+
+    <p style="margin-top:32px;font-size:13px;color:rgba(255,255,255,0.4)">
+      This link expires in 24 hours. If it has expired, please contact us for a new link.
+    </p>
+    <p style="margin-top:12px;font-size:13px;color:rgba(255,255,255,0.4)">
+      Questions? Email us at <a href="mailto:info@navomarine.com" style="color:#1E6EFF">info@navomarine.com</a> or call <a href="tel:6192889746" style="color:#1E6EFF">619-288-9746</a>.
+    </p>
+  </div>
+</body>
+</html>`
+
+  return {
+    to,
+    subject: `Complete your payment - ${productName}`,
     html,
   }
 }

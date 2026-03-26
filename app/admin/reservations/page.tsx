@@ -4,6 +4,7 @@ import { AssignUnitDropdown } from './AssignUnitDropdown'
 import { PackageUnitAssignment } from './PackageUnitAssignment'
 import { availableUnitsForReservation } from '@/lib/admin/unit-availability'
 import { DeleteReservationButton } from './DeleteReservationButton'
+import { SendInvoiceButton } from './SendInvoiceButton'
 
 export const metadata: Metadata = {
   title: 'Reservations | NAVO Admin',
@@ -103,6 +104,10 @@ export default async function AdminReservationsPage() {
     acc[r.status] = (acc[r.status] ?? 0) + 1
     return acc
   }, {})
+
+  function canInvoice(r: Reservation): boolean {
+    return r.status === 'reserved_unpaid'
+  }
 
   function canDelete(r: Reservation): boolean {
     if (r.status === 'reserved_unpaid' || r.status === 'cancelled') return true
@@ -205,13 +210,23 @@ export default async function AdminReservationsPage() {
                       {new Date(r.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-5 py-3">
-                      {canDelete(r) && (
-                        <DeleteReservationButton
-                          reservationId={r.id}
-                          customerEmail={r.customer_email}
-                          reservationType={r.reservation_type}
-                        />
-                      )}
+                      <div className="flex items-center gap-1">
+                        {canInvoice(r) && (
+                          <SendInvoiceButton
+                            reservationId={r.id}
+                            customerEmail={r.customer_email}
+                            totalCents={r.total_cents}
+                            productName={r.products?.name ?? 'NAVO Product'}
+                          />
+                        )}
+                        {canDelete(r) && (
+                          <DeleteReservationButton
+                            reservationId={r.id}
+                            customerEmail={r.customer_email}
+                            reservationType={r.reservation_type}
+                          />
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )

@@ -1,4 +1,4 @@
-import { bookingPending, bookingConfirmed } from '@/lib/email/templates'
+import { bookingPending, bookingConfirmed, paymentRequest } from '@/lib/email/templates'
 
 const base = {
   to: 'sailor@test.com',
@@ -51,5 +51,40 @@ describe('bookingConfirmed', () => {
   it('handles null dates gracefully', () => {
     const { html } = bookingConfirmed({ ...base, orderId: 'ord-xyz-456', startDate: null, endDate: null })
     expect(html).toContain('See event details')
+  })
+})
+
+describe('paymentRequest', () => {
+  const paymentBase = {
+    ...base,
+    paymentUrl: 'https://checkout.stripe.com/c/pay_test123',
+  }
+
+  it('returns correct to and subject', () => {
+    const result = paymentRequest(paymentBase)
+    expect(result.to).toBe('sailor@test.com')
+    expect(result.subject).toBe('Complete your payment - Atlas 2 Rental')
+  })
+
+  it('html contains product name, dates, amount, reservationId, and payment link', () => {
+    const { html } = paymentRequest(paymentBase)
+    expect(html).toContain('Atlas 2 Rental')
+    expect(html).toContain('2026-04-10')
+    expect(html).toContain('2026-04-14')
+    expect(html).toContain('$245.00')
+    expect(html).toContain('res-abc-123')
+    expect(html).toContain('https://checkout.stripe.com/c/pay_test123')
+  })
+
+  it('contains a Complete Your Payment CTA link', () => {
+    const { html } = paymentRequest(paymentBase)
+    expect(html).toContain('Complete Your Payment')
+    expect(html).toContain('href="https://checkout.stripe.com/c/pay_test123"')
+  })
+
+  it('handles null dates gracefully', () => {
+    const { html } = paymentRequest({ ...paymentBase, startDate: null, endDate: null })
+    expect(html).toContain('See booking details')
+    expect(html).not.toContain('2026-04-10')
   })
 })

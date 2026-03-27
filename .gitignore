@@ -50,3 +50,12 @@ next-env.d.ts
 .env*.local
 .gstack/
 .superpowers/
+
+# AI tooling (local only)
+.agents/
+.claude/
+CLAUDE.md
+TODOS.md
+docs/superpowers/
+docs/context/
+brandGuides/

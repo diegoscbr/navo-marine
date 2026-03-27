@@ -19,6 +19,7 @@ type Reservation = {
   end_date: string | null
   total_cents: number
   created_at: string
+  expires_at: string | null
   unit_id: string | null
   products: { name: string; tablet_required: boolean; atlas2_units_required: number } | null
 }
@@ -45,7 +46,7 @@ function statusBadge(status: string): string {
 export default async function AdminReservationsPage() {
   const { data: reservations, error } = await supabaseAdmin
     .from('reservations')
-    .select('id, customer_email, status, reservation_type, start_date, end_date, total_cents, created_at, unit_id, products(name, tablet_required, atlas2_units_required)')
+    .select('id, customer_email, status, reservation_type, start_date, end_date, total_cents, created_at, expires_at, unit_id, products(name, tablet_required, atlas2_units_required)')
     .order('created_at', { ascending: false })
     .limit(100)
 
@@ -106,7 +107,13 @@ export default async function AdminReservationsPage() {
   }, {})
 
   function canInvoice(r: Reservation): boolean {
-    return r.status === 'reserved_unpaid'
+    // Only show for unpaid reservations that haven't already been invoiced.
+    // When an invoice is sent, expires_at is set to null.
+    return r.status === 'reserved_unpaid' && r.expires_at !== null
+  }
+
+  function invoiceSent(r: Reservation): boolean {
+    return r.status === 'reserved_unpaid' && r.expires_at === null
   }
 
   function canDelete(r: Reservation): boolean {
@@ -218,6 +225,9 @@ export default async function AdminReservationsPage() {
                             totalCents={r.total_cents}
                             productName={r.products?.name ?? 'NAVO Product'}
                           />
+                        )}
+                        {invoiceSent(r) && (
+                          <span className="text-xs text-blue-400/70">Sent</span>
                         )}
                         {canDelete(r) && (
                           <DeleteReservationButton

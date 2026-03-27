@@ -28,7 +28,7 @@ export async function POST(
   // Fetch reservation
   const { data: reservation, error: fetchError } = await supabaseAdmin
     .from('reservations')
-    .select('id, customer_email, status, reservation_type, product_id, user_id, total_cents, start_date, end_date')
+    .select('id, customer_email, status, reservation_type, product_id, user_id, total_cents, start_date, end_date, expires_at')
     .eq('id', id)
     .single()
 
@@ -46,11 +46,23 @@ export async function POST(
     total_cents: number
     start_date: string | null
     end_date: string | null
+    expires_at: string | null
   }
 
   if (res.status !== 'reserved_unpaid') {
     return NextResponse.json(
       { error: 'Invoice can only be sent for unpaid reservations' },
+      { status: 409 },
+    )
+  }
+
+  // Prevent re-sending while a previous invoice link is still active.
+  // When an invoice is sent, expires_at is set to null. A null expires_at
+  // on an unpaid reservation means an invoice was already sent and the
+  // checkout session is still valid (24h Stripe default).
+  if (res.expires_at === null) {
+    return NextResponse.json(
+      { error: 'An invoice has already been sent for this reservation. The customer can pay using the link in their email.' },
       { status: 409 },
     )
   }

@@ -41,10 +41,10 @@ export function Hero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="font-heading text-5xl font-semibold leading-tight tracking-tight text-white sm:text-6xl lg:text-7xl"
+          className="font-heading text-4xl font-semibold leading-tight tracking-tight text-white [text-wrap:balance] sm:text-6xl lg:text-7xl"
         >
           Technology That{' '}
-          <br />
+          <br className="hidden sm:block" />
           <span className="text-marine-300">
             Moves Sailing Forward.
           </span>

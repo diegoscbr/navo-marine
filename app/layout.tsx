@@ -28,8 +28,8 @@ const raleway = localFont({
 export const metadata: Metadata = {
   title: 'NAVO Marine Technologies | Precision Marine Performance',
   description:
-    'Official Vakaros Atlas II Partner. Race management, performance analytics, and advanced marine data systems for high-performance sailing.',
-  keywords: ['sailing', 'race management', 'marine analytics', 'Vakaros Atlas II', 'performance sailing'],
+    'Official Vakaros Atlas 2 Partner. Race management, performance analytics, and advanced marine data systems for high-performance sailing.',
+  keywords: ['sailing', 'race management', 'marine analytics', 'Vakaros Atlas 2', 'performance sailing'],
   icons: {
     icon: '/logos/navo_icon_transparent.png',
     shortcut: '/logos/navo_icon_transparent.png',

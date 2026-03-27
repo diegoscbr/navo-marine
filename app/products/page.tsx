@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
-import { storefrontProducts } from '@/lib/commerce/products'
+import { listStorefrontProducts } from '@/lib/db/storefront'
 
 function formatUSD(cents: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100)
@@ -13,7 +13,8 @@ export const metadata: Metadata = {
   description: 'Explore NAVO Marine Technologies product offerings.',
 }
 
-export default function ProductsPage() {
+export default async function ProductsPage() {
+  const products = await listStorefrontProducts()
   return (
     <>
       <Navbar />
@@ -23,18 +24,18 @@ export default function ProductsPage() {
           Performance hardware and instrumentation for competitive sailing teams.
         </p>
 
-        <div className="mt-10 grid gap-5 sm:grid-cols-2">
-          {storefrontProducts.map((product) => (
+        <div className="mt-10 grid gap-5">
+          {products.map((product) => (
             <article
               key={product.id}
-              className="rounded-xl border border-white/10 bg-navy-800/60 p-6"
+              className="max-w-2xl rounded-xl border border-white/10 bg-navy-800/60 p-8"
             >
               <p className="text-xs uppercase tracking-[0.2em] text-cyan-glow">Product</p>
               <h2 className="font-heading mt-2 text-2xl font-semibold text-white">{product.name}</h2>
               <p className="mt-2 text-sm text-white/70">{product.descriptionShort}</p>
               <p className="mt-4 text-lg font-medium text-white">{formatUSD(product.pricing.amountCents)}</p>
               <Link
-                href={`/products/${product.slug}`}
+                href={product.slug === 'atlas-2' ? `/products/${product.slug}` : '/packages'}
                 className="mt-6 inline-flex rounded-full border border-white/20 px-5 py-2.5 text-sm text-white/85 transition-colors hover:border-white/40 hover:text-white"
               >
                 View Product

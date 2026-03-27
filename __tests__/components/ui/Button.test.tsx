@@ -31,6 +31,12 @@ describe('Button', () => {
     expect(link).toHaveClass('glass-btn', 'glass-btn-primary')
   })
 
+  it('does not apply rounded-full to the base class', () => {
+    render(<Button variant="primary">Click me</Button>)
+    const btn = screen.getByRole('button')
+    expect(btn.className).not.toContain('rounded-full')
+  })
+
   it('applies glass-btn class regardless of variant', () => {
     const { rerender } = render(<Button variant="primary">A</Button>)
     expect(screen.getByRole('button')).toHaveClass('glass-btn')

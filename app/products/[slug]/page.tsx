@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
-import { getProductBySlug } from '@/lib/commerce/products'
+import { getStorefrontProductBySlug } from '@/lib/db/storefront'
 import { ProductPurchasePanel } from './ProductPurchasePanel'
 import { ProductImageGallery } from './ProductImageGallery'
 import { ProductInfoCards } from './ProductInfoCards'
@@ -25,20 +25,10 @@ const productViewImages = [
   { src: '/products/atlas2/iphone-customizable.png', alt: 'Atlas 2 customizable phone interface' },
 ]
 
-export async function generateStaticParams() {
-  return [{ slug: 'atlas-2' }]
-}
-
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params
-  const product = getProductBySlug(slug)
-
-  if (!product) {
-    return {
-      title: 'Product Not Found | NAVO Marine Technologies',
-    }
-  }
-
+  const product = await getStorefrontProductBySlug(slug)
+  if (!product) return { title: 'Product Not Found | NAVO Marine Technologies' }
   return {
     title: `${product.name} | NAVO Marine Technologies`,
     description: product.descriptionShort,
@@ -47,7 +37,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
 export default async function ProductDetailPage({ params }: ProductPageProps) {
   const { slug } = await params
-  const product = getProductBySlug(slug)
+  const product = await getStorefrontProductBySlug(slug)
 
   if (!product) {
     notFound()

@@ -5,7 +5,7 @@ import { signIn } from 'next-auth/react'
 export function GoogleSignInButton() {
   return (
     <button
-      onClick={() => signIn('google', { callbackUrl: '/dashboard' }, { prompt: 'select_account' })}
+      onClick={() => signIn('google', { callbackUrl: '/auth/redirect' }, { prompt: 'select_account' })}
       className="inline-flex items-center gap-3 rounded-full bg-white px-6 py-3 text-sm font-medium text-gray-800 shadow-md transition-all hover:bg-gray-100 hover:shadow-lg"
     >
       <svg className="h-5 w-5" viewBox="0 0 24 24">

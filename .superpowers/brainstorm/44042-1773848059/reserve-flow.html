@@ -1,0 +1,70 @@
+<h2>Section 2: Reserve Page — UI Structure</h2>
+<p class="subtitle">How should individual rentals and regatta management packages be organized?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Single /reserve page — 3 tabs</h3>
+      <p>Extend the current tab UI with a third "Regatta Packages" tab alongside the existing "Rent for an Event" and "Custom Dates" tabs.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">Preview</div>
+        <div class="mockup-body" style="padding:12px">
+          <div class="mock-nav" style="font-size:11px;margin-bottom:8px">
+            [Rent for an Event] &nbsp;|&nbsp; [Custom Dates] &nbsp;|&nbsp; <strong>[Regatta Packages]</strong>
+          </div>
+          <div style="background:#1a2a3a;border-radius:6px;padding:10px;font-size:11px;color:#aaa">
+            <div style="margin-bottom:6px"><span style="color:#fff">Package</span><br/>
+              <select style="background:#0d1e2b;color:#aaa;border:1px solid #334;padding:3px;width:100%">
+                <option>Race Committee Package — $105/day</option>
+              </select>
+            </div>
+            <div style="margin-bottom:6px"><span style="color:#fff">Start Date</span><br/>
+              <input type="date" style="background:#0d1e2b;color:#aaa;border:1px solid #334;padding:3px;width:100%"/>
+            </div>
+            <div style="margin-bottom:6px"><span style="color:#fff">End Date</span><br/>
+              <input type="date" style="background:#0d1e2b;color:#aaa;border:1px solid #334;padding:3px;width:100%"/>
+            </div>
+            <div style="color:#1E6EFF;font-size:10px">3-month advance booking required for Management Services</div>
+          </div>
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros"><h4>Pros</h4><ul><li>One URL to share</li><li>Minimal new code</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>3 tabs gets crowded</li><li>Different audiences on same page</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Two separate pages</h3>
+      <p><strong>/reserve</strong> stays for individual unit rentals. New <strong>/packages</strong> page for Regatta Management. Navigation links to both.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">Preview</div>
+        <div class="mockup-body" style="padding:12px;font-size:11px">
+          <div class="mock-nav" style="margin-bottom:8px">Navbar: &nbsp;<strong>Reserve</strong> &nbsp;|&nbsp; <strong>Packages</strong></div>
+          <div style="display:flex;gap:8px">
+            <div style="flex:1;background:#0f2c3f;border-radius:6px;padding:8px;color:#aaa">
+              <div style="color:#00D4FF;font-size:10px;margin-bottom:4px">/reserve</div>
+              <div style="color:#fff;font-size:10px">Individual Rental</div>
+              <div style="font-size:9px;margin-top:4px">Select regatta → $35/day × days</div>
+            </div>
+            <div style="flex:1;background:#0f2c3f;border-radius:6px;padding:8px;color:#aaa">
+              <div style="color:#00D4FF;font-size:10px;margin-bottom:4px">/packages</div>
+              <div style="color:#fff;font-size:10px">Regatta Management</div>
+              <div style="font-size:9px;margin-top:4px">Select package → pick dates → pay or hold</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros"><h4>Pros</h4><ul><li>Clean separation of audiences</li><li>Each page focused & simple</li><li>Shareable URLs per service</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>More pages to build</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:16px">Check <strong>http://localhost:62339</strong> — click to select, then let me know in the terminal.</p>

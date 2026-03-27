@@ -3,7 +3,7 @@ import Image from 'next/image'
 const trustSignals = [
   {
     label: 'OFFICIAL BRAND PARTNER',
-    name: 'Vakaros Atlas II',
+    name: 'Vakaros Atlas 2',
     logoSrc: '/partners/2.png',
     logoWidth: 528,
     logoHeight: 100,

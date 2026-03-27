@@ -1,0 +1,283 @@
+<h2>Package Card — Image Layout</h2>
+<p class="subtitle">Three ways to incorporate the photos into the package cards. All use the same <code>/racecomittee.jpg</code>, <code>/racemanagement.jpg</code>, and <code>/windward-leeward.jpg</code> images.</p>
+
+<style>
+  /* Brand tokens */
+  :root {
+    --navy-900: #0B1F2A;
+    --navy-800: #0F2C3F;
+    --marine-500: #1E6EFF;
+    --cyan-glow: #00D4FF;
+  }
+
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  /* Shared card base */
+  .pkg-card {
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(255,255,255,0.05);
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    font-family: system-ui, sans-serif;
+  }
+  .pkg-card:hover { border-color: rgba(30,110,255,0.45); }
+
+  .pkg-price {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1E6EFF;
+    margin-bottom: 6px;
+  }
+  .pkg-price span { font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.45); }
+  .pkg-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .pkg-desc {
+    font-size: 12px;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+  .pkg-eq {
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+    list-style: none;
+    padding: 0; margin: 0 0 10px;
+  }
+  .pkg-eq li::before { content: "✓ "; color: #1E6EFF; }
+  .pkg-select {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1E6EFF;
+    transition: color 0.2s;
+  }
+  .pkg-card:hover .pkg-select { color: #00D4FF; }
+
+  /* ── Option A: Full-width header image ── */
+  .card-a .img-header {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    display: block;
+  }
+  .card-a .card-body {
+    padding: 16px;
+  }
+
+  /* ── Option B: Square icon (left-aligned) ── */
+  .card-b .card-body {
+    padding: 16px;
+  }
+  .card-b .icon-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .card-b .icon-wrap {
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .card-b .icon-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .card-b .icon-meta { flex: 1; }
+  .card-b .icon-meta .pkg-name { margin-bottom: 2px; }
+
+  /* ── Option C: Full-width image behind gradient overlay ── */
+  .card-c {
+    position: relative;
+    min-height: 240px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  .card-c .bg-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+  }
+  .card-c .gradient-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(11,31,42,0.15) 0%, rgba(11,31,42,0.92) 65%);
+    z-index: 1;
+  }
+  .card-c .card-body {
+    position: relative;
+    z-index: 2;
+    padding: 16px;
+  }
+
+  .layout-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 10px;
+    margin-top: 4px;
+  }
+</style>
+
+<!-- Option A -->
+<div class="layout-label">Option A — Full-width header image</div>
+<div class="cards-grid">
+  <div class="pkg-card card-a">
+    <img class="img-header" src="/racecomittee.jpg" alt="Race Committee" />
+    <div class="card-body">
+      <div class="pkg-price">$105<span>/day</span></div>
+      <div class="pkg-name">Race Committee Package</div>
+      <p class="pkg-desc">Essential tablet tools for race committee operations at any regatta.</p>
+      <ul class="pkg-eq"><li>1× Committee Tablet</li></ul>
+      <div class="pkg-select">Select →</div>
+    </div>
+  </div>
+  <div class="pkg-card card-a">
+    <img class="img-header" src="/windward-leeward.jpg" alt="W/L Course" />
+    <div class="card-body">
+      <div class="pkg-price">$315<span>/day</span></div>
+      <div class="pkg-name">W/L Course Package</div>
+      <p class="pkg-desc">Full Atlas 2 fleet deployment for windward-leeward course management.</p>
+      <ul class="pkg-eq"><li>5× Atlas 2 Units</li><li>1× Committee Tablet</li></ul>
+      <div class="pkg-select">Select →</div>
+    </div>
+  </div>
+  <div class="pkg-card card-a">
+    <img class="img-header" src="/racemanagement.jpg" alt="RaceSense" />
+    <div class="card-body">
+      <div class="pkg-price">$500<span>/day</span></div>
+      <div class="pkg-name">RaceSense Management</div>
+      <p class="pkg-desc">Human-led race orchestration with full data platform.</p>
+      <ul class="pkg-eq"><li>Dedicated Race Director</li><li>Full Data Platform</li></ul>
+      <div class="pkg-select">Select →</div>
+    </div>
+  </div>
+</div>
+
+<!-- Option B -->
+<div class="layout-label">Option B — Small square icon (thumbnail)</div>
+<div class="cards-grid">
+  <div class="pkg-card card-b">
+    <div class="card-body">
+      <div class="icon-row">
+        <div class="icon-wrap"><img src="/racecomittee.jpg" alt="" /></div>
+        <div class="icon-meta">
+          <div class="pkg-name">Race Committee Package</div>
+          <div class="pkg-price" style="font-size:17px;margin:0">$105<span>/day</span></div>
+        </div>
+      </div>
+      <p class="pkg-desc">Essential tablet tools for race committee operations at any regatta.</p>
+      <ul class="pkg-eq"><li>1× Committee Tablet</li></ul>
+      <div class="pkg-select">Select →</div>
+    </div>
+  </div>
+  <div class="pkg-card card-b">
+    <div class="card-body">
+      <div class="icon-row">
+        <div class="icon-wrap"><img src="/windward-leeward.jpg" alt="" /></div>
+        <div class="icon-meta">
+          <div class="pkg-name">W/L Course Package</div>
+          <div class="pkg-price" style="font-size:17px;margin:0">$315<span>/day</span></div>
+        </div>
+      </div>
+      <p class="pkg-desc">Full Atlas 2 fleet deployment for windward-leeward course management.</p>
+      <ul class="pkg-eq"><li>5× Atlas 2 Units</li><li>1× Committee Tablet</li></ul>
+      <div class="pkg-select">Select →</div>
+    </div>
+  </div>
+  <div class="pkg-card card-b">
+    <div class="card-body">
+      <div class="icon-row">
+        <div class="icon-wrap"><img src="/racemanagement.jpg" alt="" /></div>
+        <div class="icon-meta">
+          <div class="pkg-name">RaceSense Management</div>
+          <div class="pkg-price" style="font-size:17px;margin:0">$500<span>/day</span></div>
+        </div>
+      </div>
+      <p class="pkg-desc">Human-led race orchestration with full data platform.</p>
+      <ul class="pkg-eq"><li>Dedicated Race Director</li><li>Full Data Platform</li></ul>
+      <div class="pkg-select">Select →</div>
+    </div>
+  </div>
+</div>
+
+<!-- Option C -->
+<div class="layout-label">Option C — Full bleed image with gradient overlay</div>
+<div class="cards-grid">
+  <div class="pkg-card card-c">
+    <img class="bg-img" src="/racecomittee.jpg" alt="" />
+    <div class="gradient-overlay"></div>
+    <div class="card-body">
+      <div class="pkg-price">$105<span>/day</span></div>
+      <div class="pkg-name">Race Committee Package</div>
+      <p class="pkg-desc">Essential tablet tools for race committee operations.</p>
+      <ul class="pkg-eq"><li>1× Committee Tablet</li></ul>
+      <div class="pkg-select">Select →</div>
+    </div>
+  </div>
+  <div class="pkg-card card-c">
+    <img class="bg-img" src="/windward-leeward.jpg" alt="" />
+    <div class="gradient-overlay"></div>
+    <div class="card-body">
+      <div class="pkg-price">$315<span>/day</span></div>
+      <div class="pkg-name">W/L Course Package</div>
+      <p class="pkg-desc">Full Atlas 2 fleet deployment for W/L course management.</p>
+      <ul class="pkg-eq"><li>5× Atlas 2 Units</li><li>1× Committee Tablet</li></ul>
+      <div class="pkg-select">Select →</div>
+    </div>
+  </div>
+  <div class="pkg-card card-c">
+    <img class="bg-img" src="/racemanagement.jpg" alt="" />
+    <div class="gradient-overlay"></div>
+    <div class="card-body">
+      <div class="pkg-price">$500<span>/day</span></div>
+      <div class="pkg-name">RaceSense Management</div>
+      <p class="pkg-desc">Human-led race orchestration with full data platform.</p>
+      <ul class="pkg-eq"><li>Dedicated Race Director</li><li>Full Data Platform</li></ul>
+      <div class="pkg-select">Select →</div>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top: 0.5rem;">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Full-width header image</h3>
+      <p>Image sits on top, content below. Clean editorial feel.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Small square icon</h3>
+      <p>Thumbnail beside the title. Compact, information-dense.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Full bleed with gradient</h3>
+      <p>Image fills the whole card, text overlaid at the bottom. Most dramatic.</p>
+    </div>
+  </div>
+</div>

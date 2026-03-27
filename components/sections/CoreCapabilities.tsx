@@ -7,8 +7,8 @@ const capabilities = [
   {
     title: 'Performance Technology',
     description:
-      'Official Vakaros Atlas II integration. Onboard systems optimization, instrumentation configuration, and athlete-level calibration.',
-    items: ['Atlas II Integration', 'Systems Optimization', 'Instrumentation Config', 'Athlete Calibration'],
+      'Official Vakaros Atlas 2 integration. Onboard systems optimization, instrumentation configuration, and athlete-level calibration.',
+    items: ['Atlas 2 Integration', 'Systems Optimization', 'Instrumentation Config', 'Athlete Calibration'],
   },
   {
     title: 'Race Management Services',
@@ -41,10 +41,10 @@ export function CoreCapabilities() {
               className="rounded-xl border border-white/10 bg-navy-800/60 p-8"
             >
               <h3 className="font-heading mb-4 text-lg font-semibold text-white">{cap.title}</h3>
-              <p className="mb-6 text-sm leading-relaxed text-white/60">{cap.description}</p>
+              <p className="mb-6 text-sm leading-relaxed text-white/75">{cap.description}</p>
               <ul className="space-y-2">
                 {cap.items.map((item) => (
-                  <li key={item} className="flex items-center gap-3 text-sm text-white/70">
+                  <li key={item} className="flex items-center gap-3 text-sm text-white/80">
                     <span className="h-1 w-4 rounded-full bg-marine-500" />
                     {item}
                   </li>

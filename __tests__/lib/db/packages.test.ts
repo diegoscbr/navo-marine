@@ -158,6 +158,87 @@ describe('checkMultiUnitAvailability', () => {
     expect(result.reason).toMatch(/atlas 2/i)
   })
 
+  it('excludes reservation_units whose parent reservation is cancelled', async () => {
+    const ruChains: ReturnType<typeof makeChain>[] = []
+    ;(mockSupabase.from as jest.Mock).mockImplementation((table: string) => {
+      if (table === 'units') {
+        const totals = [
+          { count: 6, error: null },
+          { count: 2, error: null },
+        ]
+        let unitCall = 0
+        return makeChain({
+          gte: jest.fn().mockImplementation(() => totals[unitCall++]),
+        })
+      }
+      // reservation_units — inner join filters cancelled at DB level
+      const chain = makeChain({
+        gte: jest.fn().mockResolvedValue({
+          data: [
+            { quantity: 1, reservations: { status: 'reserved_paid' } },
+          ],
+          error: null,
+        }),
+      })
+      ruChains.push(chain)
+      return chain
+    })
+
+    const { checkMultiUnitAvailability } = await import('@/lib/db/packages')
+    const result = await checkMultiUnitAvailability('product-uuid', '2027-06-01', '2027-06-05', 5, true)
+    // 6 total - 1 active allocated = 5 >= 5 needed
+    expect(result.available).toBe(true)
+    // Verify the reservation_units query joins on reservations and filters by status
+    expect(ruChains.length).toBeGreaterThan(0)
+    expect(ruChains[0].select).toHaveBeenCalledWith(
+      expect.stringContaining('reservations!inner(status)'),
+    )
+    expect(ruChains[0].in).toHaveBeenCalledWith(
+      'reservations.status',
+      ['reserved_unpaid', 'reserved_authorized', 'reserved_paid'],
+    )
+  })
+
+  it('counts reservation_units for paid reservations even with past expires_at', async () => {
+    const ruChains: ReturnType<typeof makeChain>[] = []
+    ;(mockSupabase.from as jest.Mock).mockImplementation((table: string) => {
+      if (table === 'units') {
+        const totals = [
+          { count: 5, error: null },
+          { count: 2, error: null },
+        ]
+        let unitCall = 0
+        return makeChain({
+          gte: jest.fn().mockImplementation(() => totals[unitCall++]),
+        })
+      }
+      // reservation_units — 3 rows all with paid status (no expires_at filtering)
+      const chain = makeChain({
+        gte: jest.fn().mockResolvedValue({
+          data: [
+            { quantity: 1, reservations: { status: 'reserved_paid' } },
+            { quantity: 1, reservations: { status: 'reserved_paid' } },
+            { quantity: 1, reservations: { status: 'reserved_paid' } },
+          ],
+          error: null,
+        }),
+      })
+      ruChains.push(chain)
+      return chain
+    })
+
+    const { checkMultiUnitAvailability } = await import('@/lib/db/packages')
+    const result = await checkMultiUnitAvailability('product-uuid', '2027-06-01', '2027-06-05', 5, true)
+    // 5 total - 3 allocated = 2 < 5 needed
+    expect(result.available).toBe(false)
+    expect(result.reason).toMatch(/atlas 2/i)
+    // Verify status filter is applied (no expires_at filter)
+    expect(ruChains[0].in).toHaveBeenCalledWith(
+      'reservations.status',
+      ['reserved_unpaid', 'reserved_authorized', 'reserved_paid'],
+    )
+  })
+
   it('throws if DB returns error on unit count', async () => {
     ;(mockSupabase.from as jest.Mock).mockImplementation(() =>
       makeChain({ gte: jest.fn().mockResolvedValue({ count: null, error: { message: 'DB error' } }) }),

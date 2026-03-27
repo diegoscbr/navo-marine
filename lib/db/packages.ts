@@ -97,13 +97,11 @@ export async function checkMultiUnitAvailability(
   if (tabErr) throw new Error(`checkMultiUnitAvailability: ${tabErr.message}`)
 
   // 3. Atlas 2 units already allocated for overlapping date range
-  // NOTE: This query does not filter by reservation status. To prevent cancelled reservations
-  // from blocking availability, reservation_units rows must be deleted when a reservation
-  // is cancelled. Tracked in TODOS.md Phase 5 cleanup.
   const { data: atlas2AllocatedRows, error: allocErr } = await supabaseAdmin
     .from('reservation_units')
-    .select('quantity')
+    .select('quantity, reservations!inner(status)')
     .eq('unit_type', 'atlas2')
+    .in('reservations.status', ['reserved_unpaid', 'reserved_authorized', 'reserved_paid'])
     .lte('start_date', endDate)
     .gte('end_date', startDate)
 
@@ -121,14 +119,13 @@ export async function checkMultiUnitAvailability(
   }
 
   // 4. Tablet units already allocated for overlapping date range (only if needed)
-  // NOTE: Same cancellation gap as query 3 above — reservation_units rows must be
-  // deleted on cancellation to avoid false unavailability.
   let tabletAllocated = 0
   if (tabletRequired) {
     const { data: tabAllocRows, error: tabAllocErr } = await supabaseAdmin
       .from('reservation_units')
-      .select('quantity')
+      .select('quantity, reservations!inner(status)')
       .eq('unit_type', 'tablet')
+      .in('reservations.status', ['reserved_unpaid', 'reserved_authorized', 'reserved_paid'])
       .lte('start_date', endDate)
       .gte('end_date', startDate)
     if (tabAllocErr) throw new Error(`checkMultiUnitAvailability: ${tabAllocErr.message}`)

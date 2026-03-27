@@ -1,21 +1,33 @@
-MIT License
+NAVO Marine Platform — Proprietary License
 
-Copyright (c) 2026 Diego Escobar
+Copyright (c) 2026 Diego Escobar. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This software and its source code are the intellectual property of
+Diego Escobar. The source code is made publicly available for portfolio
+and educational reference purposes only.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+PERMISSIONS:
+- You may view and read the source code.
+- You may reference the code for learning purposes.
+- You may fork the repository for the sole purpose of submitting
+  contributions back to this project with the author's approval.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+RESTRICTIONS:
+- You may NOT use this software, in whole or in part, for any
+  commercial purpose without explicit written permission from the author.
+- You may NOT copy, modify, merge, publish, distribute, sublicense,
+  or sell copies of this software.
+- You may NOT use this codebase as a foundation for derivative works
+  or competing products.
+
+EXCLUSIVE USE LICENSE:
+NAVO Marine Technologies is granted an exclusive, non-transferable
+license to use, deploy, and operate this software for their business
+operations. This license does not transfer ownership of the
+intellectual property, which remains with the author.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY ARISING FROM THE USE OF THIS SOFTWARE.
+
+For licensing inquiries: diego.e@me.com

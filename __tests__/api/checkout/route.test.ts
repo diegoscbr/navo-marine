@@ -86,8 +86,15 @@ it('dispatches purchase to handlePurchase and returns url', async () => {
   expect(body.url).toBe('https://stripe.com/purchase')
 })
 
-it('returns 400 for invalid confirmation_email', async () => {
+it('silently ignores confirmation_email — session email is always used (CSO #2)', async () => {
   const { POST } = await import('@/app/api/checkout/route')
-  const res = await POST(makeReq({ reservation_type: 'purchase', product_id: 'atlas-2', quantity: 1, confirmation_email: 'not-an-email' }))
-  expect(res.status).toBe(400)
+  // confirmation_email must be ignored regardless of whether it is valid or invalid
+  const res = await POST(makeReq({ reservation_type: 'purchase', product_id: 'atlas-2', quantity: 1, confirmation_email: 'attacker@evil.com' }))
+  // Request succeeds and the handler receives the session email, not the override
+  expect(res.status).toBe(200)
+  expect(handlePurchase).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({ user: expect.objectContaining({ email: 'test@example.com' }) }),
+    expect.anything(),
+  )
 })

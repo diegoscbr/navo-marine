@@ -15,7 +15,6 @@ type CheckoutBody = {
   extra_days?: number
   start_date?: string
   end_date?: string
-  confirmation_email?: string
   quantity?: number
   warranty_selected?: boolean
 }
@@ -37,18 +36,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  // Use confirmation_email if provided and valid; fall back to session email
-  const rawConfirmEmail = body.confirmation_email?.trim()
-  const emailOverride =
-    rawConfirmEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawConfirmEmail)
-      ? rawConfirmEmail
-      : null
-  if (rawConfirmEmail && !emailOverride) {
-    return NextResponse.json({ error: 'confirmation_email is not a valid email address' }, { status: 400 })
-  }
-
+  // Always use authenticated session email — never accept client-provided overrides
   const authedSession = {
-    user: { ...session.user, email: emailOverride ?? session.user.email },
+    user: { id: session.user.id ?? null, email: session.user.email ?? null },
   } as { user: { id?: string | null; email?: string | null } }
 
   // 2. Common validation

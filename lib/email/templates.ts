@@ -1,3 +1,12 @@
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 function formatUSD(cents: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100)
 }
@@ -33,11 +42,11 @@ export function bookingPending(params: BookingParams): EmailResult {
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       <tr style="border-bottom:1px solid rgba(255,255,255,0.08)">
         <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Product</td>
-        <td style="padding:10px 0;text-align:right">${productName}</td>
+        <td style="padding:10px 0;text-align:right">${escHtml(productName)}</td>
       </tr>
       <tr style="border-bottom:1px solid rgba(255,255,255,0.08)">
         <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Dates</td>
-        <td style="padding:10px 0;text-align:right">${dateRange}</td>
+        <td style="padding:10px 0;text-align:right">${escHtml(dateRange)}</td>
       </tr>
       <tr style="border-bottom:1px solid rgba(255,255,255,0.08)">
         <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Total</td>
@@ -45,7 +54,7 @@ export function bookingPending(params: BookingParams): EmailResult {
       </tr>
       <tr>
         <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Reservation ID</td>
-        <td style="padding:10px 0;text-align:right;font-size:12px;color:rgba(255,255,255,0.4)">${reservationId}</td>
+        <td style="padding:10px 0;text-align:right;font-size:12px;color:rgba(255,255,255,0.4)">${escHtml(reservationId)}</td>
       </tr>
     </table>
 
@@ -58,7 +67,7 @@ export function bookingPending(params: BookingParams): EmailResult {
 
   return {
     to,
-    subject: `Your NAVO booking is processing - ${productName}`,
+    subject: `Your NAVO booking is processing - ${escHtml(productName)}`,
     html,
   }
 }
@@ -83,11 +92,11 @@ export function bookingConfirmed(params: BookingConfirmedParams): EmailResult {
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       <tr style="border-bottom:1px solid rgba(255,255,255,0.08)">
         <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Product</td>
-        <td style="padding:10px 0;text-align:right">${productName}</td>
+        <td style="padding:10px 0;text-align:right">${escHtml(productName)}</td>
       </tr>
       <tr style="border-bottom:1px solid rgba(255,255,255,0.08)">
         <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Dates</td>
-        <td style="padding:10px 0;text-align:right">${dateRange}</td>
+        <td style="padding:10px 0;text-align:right">${escHtml(dateRange)}</td>
       </tr>
       <tr style="border-bottom:1px solid rgba(255,255,255,0.08)">
         <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Total Paid</td>
@@ -95,11 +104,11 @@ export function bookingConfirmed(params: BookingConfirmedParams): EmailResult {
       </tr>
       <tr style="border-bottom:1px solid rgba(255,255,255,0.08)">
         <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Order ID</td>
-        <td style="padding:10px 0;text-align:right;font-size:12px;color:rgba(255,255,255,0.4)">${orderId}</td>
+        <td style="padding:10px 0;text-align:right;font-size:12px;color:rgba(255,255,255,0.4)">${escHtml(orderId)}</td>
       </tr>
       <tr>
         <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Reservation ID</td>
-        <td style="padding:10px 0;text-align:right;font-size:12px;color:rgba(255,255,255,0.4)">${reservationId}</td>
+        <td style="padding:10px 0;text-align:right;font-size:12px;color:rgba(255,255,255,0.4)">${escHtml(reservationId)}</td>
       </tr>
     </table>
 
@@ -112,7 +121,7 @@ export function bookingConfirmed(params: BookingConfirmedParams): EmailResult {
 
   return {
     to,
-    subject: `Booking confirmed - ${productName}`,
+    subject: `Booking confirmed - ${escHtml(productName)}`,
     html,
   }
 }
@@ -134,11 +143,11 @@ export function paymentRequest(params: PaymentRequestParams): EmailResult {
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       <tr style="border-bottom:1px solid rgba(255,255,255,0.08)">
         <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Product</td>
-        <td style="padding:10px 0;text-align:right">${productName}</td>
+        <td style="padding:10px 0;text-align:right">${escHtml(productName)}</td>
       </tr>
       <tr style="border-bottom:1px solid rgba(255,255,255,0.08)">
         <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Dates</td>
-        <td style="padding:10px 0;text-align:right">${dateRange}</td>
+        <td style="padding:10px 0;text-align:right">${escHtml(dateRange)}</td>
       </tr>
       <tr style="border-bottom:1px solid rgba(255,255,255,0.08)">
         <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Total</td>
@@ -146,7 +155,7 @@ export function paymentRequest(params: PaymentRequestParams): EmailResult {
       </tr>
       <tr>
         <td style="padding:10px 0;color:rgba(255,255,255,0.4)">Reservation ID</td>
-        <td style="padding:10px 0;text-align:right;font-size:12px;color:rgba(255,255,255,0.4)">${reservationId}</td>
+        <td style="padding:10px 0;text-align:right;font-size:12px;color:rgba(255,255,255,0.4)">${escHtml(reservationId)}</td>
       </tr>
     </table>
 
@@ -166,7 +175,7 @@ export function paymentRequest(params: PaymentRequestParams): EmailResult {
 
   return {
     to,
-    subject: `Complete your payment - ${productName}`,
+    subject: `Complete your payment - ${escHtml(productName)}`,
     html,
   }
 }

@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { requireAdminSession } from '@/lib/auth-guard'
 import { supabaseAdmin } from '@/lib/db/client'
 
-const ADMIN_DOMAIN = '@navomarine.com'
-
-async function requireAdmin() {
-  const session = await auth()
-  if (!session?.user?.email?.endsWith(ADMIN_DOMAIN)) return null
-  return session
-}
-
 export async function GET() {
-  if (!(await requireAdmin())) {
+  if (!(await requireAdminSession())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const { data, error } = await supabaseAdmin
@@ -19,12 +11,15 @@ export async function GET() {
     .select('id, navo_number, serial_number, status, notes, added_at, products(id, name, slug)')
     .is('retired_at', null)
     .order('navo_number')
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[admin/units] DB error:', error.message)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
   return NextResponse.json({ units: data })
 }
 
 export async function POST(req: NextRequest) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json() as {
@@ -54,7 +49,8 @@ export async function POST(req: NextRequest) {
     if (error.code === '23505') {
       return NextResponse.json({ error: 'Unit number already exists' }, { status: 409 })
     }
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[admin/units] DB error:', error.message)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
   const unitId = (data as { id: string }).id

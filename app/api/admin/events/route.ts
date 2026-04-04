@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { requireAdminSession } from '@/lib/auth-guard'
 import { supabaseAdmin } from '@/lib/db/client'
 
-const ADMIN_DOMAIN = '@navomarine.com'
-
-async function requireAdmin() {
-  const session = await auth()
-  if (!session?.user?.email?.endsWith(ADMIN_DOMAIN)) return null
-  return session
-}
-
 export async function GET() {
-  if (!(await requireAdmin())) {
+  if (!(await requireAdminSession())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -21,14 +13,15 @@ export async function GET() {
     .order('start_date', { ascending: false })
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[admin/events] DB error:', error.message)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
   return NextResponse.json({ events: data })
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin())) {
+  if (!(await requireAdminSession())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -59,7 +52,8 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[admin/events] DB error:', error.message)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
   // Auto-link all individual_rental products to this event

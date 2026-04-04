@@ -228,3 +228,62 @@ describe('DELETE /api/admin/events/[id]', () => {
     expect(res.status).toBe(204)
   })
 })
+
+describe('error sanitization', () => {
+  it('GET /api/admin/events returns "Internal server error" on DB failure, not raw message', async () => {
+    auth.mockResolvedValue(ADMIN_SESSION)
+    const chain = makeChain({ order: jest.fn().mockResolvedValue({ data: null, error: { message: 'relation "rental_events" does not exist' } }) })
+    supabaseAdmin.from.mockReturnValue(chain)
+    const { GET } = await import('@/app/api/admin/events/route')
+    const res = await GET()
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.error).toBe('Internal server error')
+    expect(body.error).not.toContain('rental_events')
+  })
+
+  it('POST /api/admin/events returns "Internal server error" on DB failure, not raw message', async () => {
+    auth.mockResolvedValue(ADMIN_SESSION)
+    const eventChain = makeChain({ single: jest.fn().mockResolvedValue({ data: null, error: { message: 'relation "rental_events" does not exist', code: '42P01' } }) })
+    supabaseAdmin.from.mockReturnValue(eventChain)
+    const { POST } = await import('@/app/api/admin/events/route')
+    const req = new NextRequest('http://localhost/api/admin/events', {
+      method: 'POST',
+      body: JSON.stringify({ name: 'x', location: 'y', start_date: '2026-06-01', end_date: '2026-06-05' }),
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.error).toBe('Internal server error')
+    expect(body.error).not.toContain('rental_events')
+  })
+
+  it('PATCH /api/admin/events/[id] returns "Internal server error" on non-PGRST116 DB failure', async () => {
+    auth.mockResolvedValue(ADMIN_SESSION)
+    const chain = makeChain({ single: jest.fn().mockResolvedValue({ data: null, error: { message: 'connection timeout', code: '08006' } }) })
+    supabaseAdmin.from.mockReturnValue(chain)
+    const { PATCH } = await import('@/app/api/admin/events/[id]/route')
+    const req = new NextRequest('http://localhost/api/admin/events/e1', {
+      method: 'PATCH',
+      body: JSON.stringify({ active: false }),
+    })
+    const res = await PATCH(req, { params: Promise.resolve({ id: 'e1' }) })
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.error).toBe('Internal server error')
+    expect(body.error).not.toContain('timeout')
+  })
+
+  it('DELETE /api/admin/events/[id] returns "Internal server error" on DB failure, not raw message', async () => {
+    auth.mockResolvedValue(ADMIN_SESSION)
+    const chain = makeChain({ eq: jest.fn().mockResolvedValue({ error: { message: 'foreign key constraint violation' } }) })
+    supabaseAdmin.from.mockReturnValue(chain)
+    const { DELETE } = await import('@/app/api/admin/events/[id]/route')
+    const req = new NextRequest('http://localhost/api/admin/events/e1', { method: 'DELETE' })
+    const res = await DELETE(req, { params: Promise.resolve({ id: 'e1' }) })
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.error).toBe('Internal server error')
+    expect(body.error).not.toContain('foreign key')
+  })
+})

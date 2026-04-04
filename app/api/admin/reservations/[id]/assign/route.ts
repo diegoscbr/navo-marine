@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { requireAdminSession } from '@/lib/auth-guard'
 import { supabaseAdmin } from '@/lib/db/client'
-
-const ADMIN_DOMAIN = '@navomarine.com'
-
-async function requireAdmin() {
-  const session = await auth()
-  if (!session?.user?.email?.endsWith(ADMIN_DOMAIN)) return null
-  return session
-}
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await requireAdmin())) {
+  if (!(await requireAdminSession())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

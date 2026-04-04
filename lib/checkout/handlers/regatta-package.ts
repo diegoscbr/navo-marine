@@ -117,14 +117,6 @@ export async function handleRegattaPackage(
   // 7. Stripe session
   const isHold = product.payment_mode === 'hold'
 
-  console.log('[checkout] regatta_package', {
-    product_id: product.id,
-    slug: product.slug,
-    days: dayCount,
-    total_cents: totalCents,
-    payment_mode: product.payment_mode,
-  })
-
   let stripeSession
   try {
     stripeSession = await stripe.checkout.sessions.create({

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { checkPackageAvailability } from '@/lib/db/packages'
 import { supabaseAdmin } from '@/lib/db/client'
+import { isValidDate } from '@/lib/utils/dates'
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -16,6 +17,13 @@ export async function GET(req: NextRequest) {
 
   if (!productId || !startDate || !endDate) {
     return NextResponse.json({ error: 'product_id, start_date, end_date are required' }, { status: 400 })
+  }
+
+  if (!isValidDate(startDate) || !isValidDate(endDate)) {
+    return NextResponse.json(
+      { error: 'start_date and end_date must be valid YYYY-MM-DD dates' },
+      { status: 400 },
+    )
   }
 
   const { data: product } = await supabaseAdmin

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { supabaseAdmin } from '@/lib/db/client'
 import { AddEventForm } from './AddEventForm'
+import { DeleteEventButton } from './DeleteEventButton'
 
 export const metadata: Metadata = {
   title: 'Events | NAVO Admin',
@@ -58,6 +59,7 @@ export default async function AdminEventsPage() {
                 <th className="px-5 py-3">Location</th>
                 <th className="px-5 py-3">Dates</th>
                 <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -90,6 +92,9 @@ export default async function AdminEventsPage() {
                     >
                       {evt.active ? 'Active' : 'Inactive'}
                     </span>
+                  </td>
+                  <td className="px-5 py-3">
+                    <DeleteEventButton eventId={evt.id} eventName={evt.name} />
                   </td>
                 </tr>
               ))}

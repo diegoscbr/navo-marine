@@ -60,7 +60,56 @@ export async function handleRentalEvent(
     totalCents = eventProduct.rental_price_cents
   }
 
-  // 4. Create Stripe Checkout session (do this before any DB write)
+  // 4. If $0 rental, skip Stripe — register directly
+  if (totalCents === 0) {
+    const { data: reservation, error: insertError } = await supabaseAdmin
+      .from('reservations')
+      .insert({
+        reservation_type: 'rental_event',
+        product_id,
+        event_id,
+        user_id: session.user.id ?? '',
+        customer_email: session.user.email ?? '',
+        sail_number: sail_number.trim(),
+        status: 'reserved_paid',
+        stripe_checkout_session_id: null,
+        total_cents: 0,
+        extra_days,
+        late_fee_applied: false,
+        late_fee_cents: 0,
+        expires_at: null,
+      })
+      .select('id, status')
+      .single()
+
+    if (insertError) {
+      console.error('Reservation insert failed:', insertError)
+      return { status: 500, body: { error: 'Failed to create reservation' } }
+    }
+
+    const reservationId = (reservation as { id: string }).id
+
+    const pendingEmail = bookingPending({
+      to: session.user.email ?? '',
+      reservationId,
+      productName: 'Atlas 2 Rental',
+      startDate: event?.start_date ?? null,
+      endDate: event?.end_date ?? null,
+      totalCents: 0,
+    })
+    void sendEmail(pendingEmail.to, pendingEmail.subject, pendingEmail.html)
+      .catch((err) => console.error('[email] bookingPending (rental-event) failed:', err))
+
+    return {
+      status: 200,
+      body: {
+        url: `${baseUrl}/checkout/success`,
+        reservation_id: reservationId,
+      },
+    }
+  }
+
+  // 5. Create Stripe Checkout session (do this before any DB write)
   let stripeSession: { id: string; url: string | null }
   try {
     stripeSession = await stripe.checkout.sessions.create({
@@ -100,7 +149,7 @@ export async function handleRentalEvent(
     }
   }
 
-  // 5. Insert reservation row
+  // 6. Insert reservation row
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 
   const { data: reservation, error: insertError } = await supabaseAdmin

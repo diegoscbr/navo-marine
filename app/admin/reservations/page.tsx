@@ -36,11 +36,21 @@ const STATUS_STYLES: Record<string, string> = {
   completed: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
 }
 
-function statusBadge(status: string): string {
+function statusBadge(status: string, totalCents: number): string {
   if (status === 'reserved_authorized') {
     return 'HOLD — awaiting capture'
   }
+  if (status === 'reserved_paid' && totalCents === 0) {
+    return 'REGISTERED'
+  }
   return status.replace(/_/g, ' ').toUpperCase()
+}
+
+function statusStyle(status: string, totalCents: number): string {
+  if (status === 'reserved_paid' && totalCents === 0) {
+    return 'bg-purple-500/15 text-purple-400 border-purple-500/30'
+  }
+  return STATUS_STYLES[status] ?? 'bg-white/10 text-white/50 border-white/10'
 }
 
 export default async function AdminReservationsPage() {
@@ -187,9 +197,9 @@ export default async function AdminReservationsPage() {
                     <td className="px-5 py-3 text-white/60">{r.products?.name ?? '—'}</td>
                     <td className="px-5 py-3">
                       <span
-                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium border ${STATUS_STYLES[r.status] ?? 'bg-white/10 text-white/50 border-white/10'}`}
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium border ${statusStyle(r.status, r.total_cents)}`}
                       >
-                        {statusBadge(r.status)}
+                        {statusBadge(r.status, r.total_cents)}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-white/50 text-xs">

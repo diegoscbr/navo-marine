@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { requireAdminSession } from '@/lib/auth-guard'
 import { supabaseAdmin } from '@/lib/db/client'
-
-const ADMIN_DOMAIN = '@navomarine.com'
-
-async function requireAdmin() {
-  const session = await auth()
-  if (!session?.user?.email?.endsWith(ADMIN_DOMAIN)) return null
-  return session
-}
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
@@ -22,6 +14,18 @@ export async function PATCH(
 
   if (!body.status) {
     return NextResponse.json({ error: 'status is required' }, { status: 400 })
+  }
+
+  const VALID_UNIT_STATUSES = new Set([
+    'available', 'reserved_unpaid', 'reserved_paid', 'in_transit',
+    'at_event', 'returned', 'damaged', 'lost', 'sold',
+  ])
+
+  if (!VALID_UNIT_STATUSES.has(body.status)) {
+    return NextResponse.json(
+      { error: `Invalid status. Must be one of: ${[...VALID_UNIT_STATUSES].join(', ')}` },
+      { status: 400 },
+    )
   }
 
   // Block override to 'available' if unit has an active paid reservation
@@ -62,7 +66,8 @@ export async function PATCH(
 
   if (error) {
     if (error.code === 'PGRST116') return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[admin/units/id] DB error:', error.message)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
   await supabaseAdmin.from('unit_events').insert({
@@ -82,7 +87,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await requireAdmin()
+  const session = await requireAdminSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
@@ -113,7 +118,10 @@ export async function DELETE(
     .update({ retired_at: new Date().toISOString(), status: 'sold' })
     .eq('id', id)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[admin/units/id] DB error:', error.message)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 
   await supabaseAdmin.from('unit_events').insert({
     unit_id: id,

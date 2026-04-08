@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { requireAdminSession } from '@/lib/auth-guard'
 import { supabaseAdmin } from '@/lib/db/client'
-
-const ADMIN_DOMAIN = '@navomarine.com'
-
-async function requireAdmin() {
-  const session = await auth()
-  if (!session?.user?.email?.endsWith(ADMIN_DOMAIN)) return null
-  return session
-}
 
 const DELETABLE_WITHOUT_DATE_CHECK = new Set(['reserved_unpaid', 'cancelled'])
 
@@ -16,7 +8,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await requireAdmin())) {
+  if (!(await requireAdminSession())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAdminSession } from "@/lib/auth-guard";
 import { getProduct, updateProduct, deleteProduct, type ProductInput } from "@/lib/db/products";
-
-const ADMIN_DOMAIN = "@navomarine.com";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user?.email?.endsWith(ADMIN_DOMAIN)) return null;
-  return session;
-}
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await requireAdmin())) {
+  if (!(await requireAdminSession())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await params;
@@ -27,7 +19,7 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await requireAdmin())) {
+  if (!(await requireAdminSession())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await params;
@@ -40,7 +32,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await requireAdmin())) {
+  if (!(await requireAdminSession())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await params;

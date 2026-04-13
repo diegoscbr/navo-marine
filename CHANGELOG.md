@@ -2,6 +2,15 @@
 
 All notable changes to navo-marine are documented here.
 
+## [Unreleased]
+
+### Notes
+- **Event rental pricing is snapshotted at event creation**: `/api/admin/events` writes per-event pricing into `rental_event_products` from the product's current `price_per_day_cents`. Later product rental price edits do **not** retroactively change existing event checkout behavior.
+- **Zero-dollar legacy events stay zero-dollar**: event checkout reads pricing from `rental_event_products`, so an event created when the Atlas 2 rental price was `$0` will keep using the direct-success/no-Stripe path until that event allocation row is manually changed.
+- **Purchase pricing has a separate source of truth**: the Atlas 2 product detail page reads product content from Supabase, but `handlePurchase` still prices from `lib/commerce/products.ts`. Product DB/admin edits do not automatically change purchase checkout pricing unless that static catalog stays in sync.
+- **Package inventory uses two assignment models**: single-unit reservations use `reservations.unit_id`, while regatta packages also use `reservation_units`. Availability and admin assignment logic need to account for both to avoid double-booking.
+- **Playwright is production-targeted right now**: `playwright.config.ts` points at `https://navomarine.com`, so E2E runs validate production rather than local dev by default.
+
 ## [1.0.1.0] - 2026-03-23
 
 ### Added

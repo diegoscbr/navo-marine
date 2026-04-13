@@ -103,5 +103,42 @@ describe('handleRentalEvent', () => {
         line_items: [expect.objectContaining({ price_data: expect.objectContaining({ unit_amount: 17500 }) })],
       }),
     )
+    expect(insertChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        start_date: '2026-04-01',
+        end_date: '2026-04-03',
+      }),
+    )
+  })
+
+  it('registers zero-dollar event rentals without Stripe and preserves event dates on the reservation', async () => {
+    mockGetEventProduct.mockResolvedValue({ rental_price_cents: 0, rental_price_per_day_cents: null, capacity: 5 })
+    mockCheckAvailability.mockResolvedValue({ available: true, reserved: 0, capacity: 5, remaining: 5 })
+
+    const insertChain = {
+      insert: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: { id: 'res-free', status: 'reserved_paid' }, error: null }),
+    }
+    ;(supabaseAdmin.from as jest.Mock).mockReturnValue(insertChain)
+
+    const { handleRentalEvent } = await import('@/lib/checkout/handlers/rental-event')
+    const result = await handleRentalEvent(
+      { event_id: 'evt-1', product_id: 'prod-1', sail_number: 'USA-123', extra_days: 0 },
+      mockSession,
+      'http://localhost',
+    )
+
+    expect(result.status).toBe(200)
+    expect(result.body).toMatchObject({ url: 'http://localhost/checkout/success' })
+    expect(mockStripeCreate).not.toHaveBeenCalled()
+    expect(insertChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'reserved_paid',
+        total_cents: 0,
+        start_date: '2026-04-01',
+        end_date: '2026-04-03',
+      }),
+    )
   })
 })

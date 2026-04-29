@@ -21,6 +21,12 @@ type Reservation = {
   created_at: string
   expires_at: string | null
   unit_id: string | null
+  rental_events: {
+    name: string
+    location: string | null
+    start_date: string
+    end_date: string
+  } | null
   products: { name: string; tablet_required: boolean; atlas2_units_required: number } | null
 }
 
@@ -53,10 +59,28 @@ function statusStyle(status: string, totalCents: number): string {
   return STATUS_STYLES[status] ?? 'bg-white/10 text-white/50 border-white/10'
 }
 
+function reservationDateBounds(r: Reservation) {
+  return {
+    startDate: r.start_date ?? r.rental_events?.start_date ?? null,
+    endDate: r.end_date ?? r.rental_events?.end_date ?? null,
+  }
+}
+
+function reservationDateLabel(r: Reservation): string {
+  const { startDate, endDate } = reservationDateBounds(r)
+  return startDate && endDate ? `${startDate} → ${endDate}` : '—'
+}
+
+function reservationInvoiceName(r: Reservation): string {
+  const productName = r.products?.name ?? 'NAVO Product'
+  const eventName = r.reservation_type === 'rental_event' ? r.rental_events?.name : null
+  return eventName ? `${productName} — ${eventName}` : productName
+}
+
 export default async function AdminReservationsPage() {
   const { data: reservations, error } = await supabaseAdmin
     .from('reservations')
-    .select('id, customer_email, status, reservation_type, start_date, end_date, total_cents, created_at, expires_at, unit_id, products(name, tablet_required, atlas2_units_required)')
+    .select('id, customer_email, status, reservation_type, start_date, end_date, total_cents, created_at, expires_at, unit_id, rental_events(name, location, start_date, end_date), products(name, tablet_required, atlas2_units_required)')
     .order('created_at', { ascending: false })
     .limit(100)
 
@@ -131,7 +155,8 @@ export default async function AdminReservationsPage() {
     if (r.status === 'reserved_paid' || r.status === 'completed') {
       const now = new Date()
       now.setHours(0, 0, 0, 0)
-      const endDate = r.end_date ? new Date(r.end_date) : null
+      const { endDate: effectiveEndDate } = reservationDateBounds(r)
+      const endDate = effectiveEndDate ? new Date(effectiveEndDate) : null
       return endDate !== null && endDate < now
     }
     return false
@@ -172,7 +197,8 @@ export default async function AdminReservationsPage() {
             <thead>
               <tr className="border-b border-white/10 bg-white/5 text-left text-xs font-medium uppercase tracking-wider text-white/40">
                 <th className="px-5 py-3">Customer</th>
-                <th className="px-5 py-3">Package</th>
+                <th className="px-5 py-3">Reservation</th>
+                <th className="px-5 py-3">Event</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3">Dates</th>
                 <th className="px-5 py-3">Total</th>
@@ -196,6 +222,18 @@ export default async function AdminReservationsPage() {
                     <td className="px-5 py-3 text-white/70">{r.customer_email}</td>
                     <td className="px-5 py-3 text-white/60">{r.products?.name ?? '—'}</td>
                     <td className="px-5 py-3">
+                      {r.reservation_type === 'rental_event' && r.rental_events?.name ? (
+                        <>
+                          <p className="text-white/70">{r.rental_events.name}</p>
+                          {r.rental_events.location && (
+                            <p className="mt-1 text-xs text-white/35">{r.rental_events.location}</p>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-white/30">—</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3">
                       <span
                         className={`rounded-full px-2.5 py-0.5 text-xs font-medium border ${statusStyle(r.status, r.total_cents)}`}
                       >
@@ -203,7 +241,7 @@ export default async function AdminReservationsPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3 text-white/50 text-xs">
-                      {r.start_date && r.end_date ? `${r.start_date} → ${r.end_date}` : '—'}
+                      {reservationDateLabel(r)}
                     </td>
                     <td className="px-5 py-3 text-white/70">${(r.total_cents / 100).toFixed(2)}</td>
                     <td className="px-5 py-3">
@@ -233,7 +271,7 @@ export default async function AdminReservationsPage() {
                             reservationId={r.id}
                             customerEmail={r.customer_email}
                             totalCents={r.total_cents}
-                            productName={r.products?.name ?? 'NAVO Product'}
+                            productName={reservationInvoiceName(r)}
                           />
                         )}
                         {invoiceSent(r) && (

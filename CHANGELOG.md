@@ -2,6 +2,17 @@
 
 All notable changes to navo-marine are documented here.
 
+## [Unreleased]
+
+### Added
+- **Event attribution on admin reservations**: rental-event reservations now show the event name + location under the product on `/admin/reservations`, and the Send Invoice action uses `<Product> — <Event>` as the Stripe line-item description so customers can identify the event on their invoice.
+- **Event-date snapshot on reservation insert**: `handleRentalEvent` now writes `start_date` and `end_date` from the parent event onto the reservation row at checkout time, so event rentals (including the zero-dollar direct-success path) carry their own dates instead of relying on the join.
+- **Date fallback on the admin reservations table**: when a reservation row's own dates are null, the table falls back to the joined `rental_events` dates so legacy/zero-dollar registrations no longer render `—`.
+
+### Tests
+- Admin reservations page: renders event name + location for `rental_event` rows and falls back to event dates when reservation dates are null.
+- `handleRentalEvent`: paid path persists `start_date`/`end_date` from the event; zero-dollar path skips Stripe and still records event dates on the reservation.
+
 ## [1.0.1.0] - 2026-03-23
 
 ### Added

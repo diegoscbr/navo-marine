@@ -10,4 +10,9 @@
 -- a Vercel Cron route that consults Stripe before cancelling, providing
 -- defense-in-depth so this bug class cannot recur.
 
-SELECT cron.unschedule('expire-unpaid-reservations');
+DO $$
+BEGIN
+  PERFORM cron.unschedule('expire-unpaid-reservations');
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'expire-unpaid-reservations was not scheduled; skipping';
+END $$;

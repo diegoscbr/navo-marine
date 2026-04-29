@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { SectionHeader } from '@/components/ui/SectionHeader'
-import { ReserveCalendlyTrigger } from '@/components/ui/ReserveCalendlyTrigger'
+import { Button } from '@/components/ui/Button'
 import { UnderwaterCaustics } from '@/components/backgrounds/UnderwaterCaustics'
 
 const services = [
@@ -59,7 +59,7 @@ export function VakarosSection() {
               ))}
             </ul>
             <div className="mt-10 flex justify-center">
-              <ReserveCalendlyTrigger label="Reserve Units" />
+              <Button variant="primary" href="/reserve">Reserve Units</Button>
             </div>
           </div>
         </div>

@@ -39,17 +39,17 @@ No new TypeScript files, no new tests, no new dependencies, no new endpoints.
 
 The migration we'll write (`011_pause_expire_unpaid_cron.sql`) calls `cron.unschedule('<job-name>')`. The job name is set when the schedule is created — we have the function definition in migration `010` but I haven't seen the `cron.schedule()` call. The job might be named `expire-unpaid-reservations`, `expire_unpaid_reservations`, or something else entirely.
 
-- [ ] **Step 1:** Query the prod Supabase via the MCP tool to list active cron jobs.
+- [ ] **Step 1:** Query the prod Supabase via the MCP tool to find the unpaid-expiry cron job. Filter by command rather than relying on the job name, so we pick the right job even if other unrelated cron jobs exist on this project.
 
 ```
 Tool: mcp__supabase__execute_sql
 project_id: fdjuhjadjqkpqnpxgmue
-query: SELECT jobid, schedule, command, jobname FROM cron.job ORDER BY jobid;
+query: SELECT jobid, schedule, command, jobname FROM cron.job WHERE command LIKE '%expire_unpaid_reservations%';
 ```
 
-Expected: a single row whose `command` references `expire_unpaid_reservations()`. Record the exact value of `jobname`.
+Expected: exactly one row whose `command` references `expire_unpaid_reservations()`. Record the exact value of `jobname`.
 
-- [ ] **Step 2:** If the schedule exists under a different name than expected, note it. The migration in Task 1 will use whatever `jobname` appeared in Step 1.
+- [ ] **Step 2:** If the query returns 0 rows, the schedule has already been removed — skip Task 2 and mark this phase as no-op for the migration. If it returns 2+ rows (unlikely but possible), inspect each `command` to identify which is the production scheduler call and use that row's `jobname`.
 
 - [ ] **Step 3:** No commit yet — this is a discovery step.
 
@@ -523,7 +523,38 @@ In the Stripe Dashboard, on the webhook endpoint page, click "Send test event" �
 
 Open the Vercel project → Logs → filter to function logs for `/api/webhooks/stripe` within the last 5 minutes.
 
-You're looking for lines starting with `[webhook]`. Outcomes:
+You're looking for lines starting with `[webhook]`. Use this decision tree to interpret what you see:
+
+```
+[ Send test event from Stripe Dashboard ]
+                │
+                ▼
+[ Open Vercel logs · filter /api/webhooks/stripe · last 5 min ]
+                │
+        ┌───────┼─────────────────────┬────────────────────┐
+        ▼       ▼                     ▼                    ▼
+  No [webhook]  [webhook] sig=fail   [webhook] sig=ok     [webhook] sig=ok
+  lines at all   reason=...          fulfill=fail         fulfill=ok
+        │           │                step=reservation-       │
+        │           │                  lookup                │
+        ▼           ▼                  │                     ▼
+  Stripe isn't   Secret mismatch       ▼                ✓ Real customer
+  reaching the   or rotated key      ✓ Webhook is        flow worked
+  endpoint       (most common)         working
+        │           │                (test event has
+        ▼           ▼                no matching
+  URL/DNS issue  Repeat from         reservation —
+  or endpoint    step 2 (copy        that's expected)
+  disabled       fresh secret)         │
+        │           │                  ▼
+        ▼           ▼              You're done.
+  Repeat from    Confirm Vercel
+  step 1         redeploy picked
+  (verify URL    up the new env
+  + enabled)     var
+```
+
+Same outcomes in table form for quick reference:
 
 | Log line | What it means | Next step |
 |---|---|---|

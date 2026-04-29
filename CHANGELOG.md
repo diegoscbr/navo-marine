@@ -4,12 +4,14 @@ All notable changes to navo-marine are documented here.
 
 ## [Unreleased]
 
-### Notes
-- **Event rental pricing is snapshotted at event creation**: `/api/admin/events` writes per-event pricing into `rental_event_products` from the product's current `price_per_day_cents`. Later product rental price edits do **not** retroactively change existing event checkout behavior.
-- **Zero-dollar legacy events stay zero-dollar**: event checkout reads pricing from `rental_event_products`, so an event created when the Atlas 2 rental price was `$0` will keep using the direct-success/no-Stripe path until that event allocation row is manually changed.
-- **Purchase pricing has a separate source of truth**: the Atlas 2 product detail page reads product content from Supabase, but `handlePurchase` still prices from `lib/commerce/products.ts`. Product DB/admin edits do not automatically change purchase checkout pricing unless that static catalog stays in sync.
-- **Package inventory uses two assignment models**: single-unit reservations use `reservations.unit_id`, while regatta packages also use `reservation_units`. Availability and admin assignment logic need to account for both to avoid double-booking.
-- **Playwright is production-targeted right now**: `playwright.config.ts` points at `https://navomarine.com`, so E2E runs validate production rather than local dev by default.
+### Added
+- **Event attribution on admin reservations**: rental-event reservations now show the event name + location under the product on `/admin/reservations`, and the Send Invoice action uses `<Product> — <Event>` as the Stripe line-item description so customers can identify the event on their invoice.
+- **Event-date snapshot on reservation insert**: `handleRentalEvent` now writes `start_date` and `end_date` from the parent event onto the reservation row at checkout time, so event rentals (including the zero-dollar direct-success path) carry their own dates instead of relying on the join.
+- **Date fallback on the admin reservations table**: when a reservation row's own dates are null, the table falls back to the joined `rental_events` dates so legacy/zero-dollar registrations no longer render `—`.
+
+### Tests
+- Admin reservations page: renders event name + location for `rental_event` rows and falls back to event dates when reservation dates are null.
+- `handleRentalEvent`: paid path persists `start_date`/`end_date` from the event; zero-dollar path skips Stripe and still records event dates on the reservation.
 
 ## [1.0.1.0] - 2026-03-23
 

@@ -97,7 +97,8 @@ describe('/admin/reservations page', () => {
     render(jsx as React.ReactElement)
 
     expect(screen.getByText('Vakaros Atlas 2')).toBeInTheDocument()
-    expect(screen.getByText('Rolex Miami OCR · Miami')).toBeInTheDocument()
+    expect(screen.getByText('Rolex Miami OCR')).toBeInTheDocument()
+    expect(screen.getByText('Miami')).toBeInTheDocument()
     expect(screen.getByText('2026-04-10 → 2026-04-12')).toBeInTheDocument()
     expect(screen.getByText('REGISTERED')).toBeInTheDocument()
   })

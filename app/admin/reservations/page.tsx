@@ -71,13 +71,6 @@ function reservationDateLabel(r: Reservation): string {
   return startDate && endDate ? `${startDate} → ${endDate}` : '—'
 }
 
-function reservationContextLabel(r: Reservation): string | null {
-  if (r.reservation_type !== 'rental_event' || !r.rental_events?.name) return null
-  return r.rental_events.location
-    ? `${r.rental_events.name} · ${r.rental_events.location}`
-    : r.rental_events.name
-}
-
 function reservationInvoiceName(r: Reservation): string {
   const productName = r.products?.name ?? 'NAVO Product'
   const eventName = r.reservation_type === 'rental_event' ? r.rental_events?.name : null
@@ -205,6 +198,7 @@ export default async function AdminReservationsPage() {
               <tr className="border-b border-white/10 bg-white/5 text-left text-xs font-medium uppercase tracking-wider text-white/40">
                 <th className="px-5 py-3">Customer</th>
                 <th className="px-5 py-3">Reservation</th>
+                <th className="px-5 py-3">Event</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3">Dates</th>
                 <th className="px-5 py-3">Total</th>
@@ -226,10 +220,17 @@ export default async function AdminReservationsPage() {
                 return (
                   <tr key={r.id} className="bg-white/[0.02] transition-colors hover:bg-white/5">
                     <td className="px-5 py-3 text-white/70">{r.customer_email}</td>
+                    <td className="px-5 py-3 text-white/60">{r.products?.name ?? '—'}</td>
                     <td className="px-5 py-3">
-                      <p className="text-white/60">{r.products?.name ?? '—'}</p>
-                      {reservationContextLabel(r) && (
-                        <p className="mt-1 text-xs text-white/35">{reservationContextLabel(r)}</p>
+                      {r.reservation_type === 'rental_event' && r.rental_events?.name ? (
+                        <>
+                          <p className="text-white/70">{r.rental_events.name}</p>
+                          {r.rental_events.location && (
+                            <p className="mt-1 text-xs text-white/35">{r.rental_events.location}</p>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-white/30">—</span>
                       )}
                     </td>
                     <td className="px-5 py-3">

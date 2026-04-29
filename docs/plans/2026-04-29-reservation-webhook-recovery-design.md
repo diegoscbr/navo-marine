@@ -52,7 +52,7 @@ Six paying customers + one likely-internal email had their reservations phantom-
 | Customer | Amount | Event dates | Notes |
 |---|---|---|---|
 | andypivey@gmail.com | $350 | 2026-05-15 → 05-24 | Confirmed paid in Stripe |
-| info@navomarine.com | $350 | 2026-05-15 → 05-24 | Likely internal test (no Stripe charge) |
+| info@navomarine.com | $350 | 2026-05-15 → 05-24 | Confirmed internal test (no Stripe charge) |
 | rteitge@gmail.com | $350 | 2026-05-15 → 05-24 | Confirmed paid in Stripe |
 | mcrussell1015@gmail.com | $105 | 2026-06-12 → 06-14 | Confirmed paid in Stripe |
 | brantbolling@gmail.com | $105 | 2026-06-12 → 06-14 | Confirmed paid in Stripe |

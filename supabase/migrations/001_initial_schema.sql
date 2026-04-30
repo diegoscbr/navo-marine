@@ -3,8 +3,11 @@
 -- Phase 1: Commerce, Rental & Inventory System
 -- ============================================================
 
--- Enable pg_cron (must be enabled in Supabase dashboard first)
--- Extensions are enabled via Supabase dashboard, not SQL
+-- Extensions
+-- pg_cron schedules the maintenance jobs at the bottom of this file.
+-- IF NOT EXISTS keeps this safe on environments where the extension is
+-- already enabled at the project level (e.g. production).
+CREATE EXTENSION IF NOT EXISTS pg_cron;
 
 -- ============================================================
 -- 1. PRODUCTS

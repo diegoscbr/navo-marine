@@ -63,6 +63,8 @@ export async function fulfillCheckoutSession(
   const paymentIntentId =
     typeof session.payment_intent === 'string' ? session.payment_intent : null
 
+  console.log(`[webhook] fulfill=start sessionId=${sessionId} paymentIntentId=${paymentIntentId ?? 'none'}`)
+
   // 1. Find the reservation by stripe_checkout_session_id
   const { data: reservation, error: resErr } = await supabaseAdmin
     .from('reservations')
@@ -71,8 +73,13 @@ export async function fulfillCheckoutSession(
     .single()
 
   if (resErr || !reservation) {
+    const reason = resErr?.message ?? 'reservation row not found'
+    console.error(`[webhook] fulfill=fail step=reservation-lookup sessionId=${sessionId} error=${reason}`)
     return { ok: false, error: `Reservation not found for session ${sessionId}` }
   }
+
+  const reservationId = (reservation as { id: string }).id
+  console.log(`[webhook] fulfill=lookup-ok reservationId=${reservationId}`)
 
   // 2. Update reservation to reserved_paid
   const { error: updateErr } = await supabaseAdmin
@@ -82,9 +89,10 @@ export async function fulfillCheckoutSession(
       stripe_payment_intent_id: paymentIntentId,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', (reservation as { id: string }).id)
+    .eq('id', reservationId)
 
   if (updateErr) {
+    console.error(`[webhook] fulfill=fail step=reservation-update reservationId=${reservationId} error=${updateErr.message}`)
     return { ok: false, error: `Failed to update reservation: ${updateErr.message}` }
   }
 
@@ -100,7 +108,7 @@ export async function fulfillCheckoutSession(
         (reservation as { customer_email: string }).customer_email ??
         session.customer_email ??
         '',
-      reservation_id: (reservation as { id: string }).id,
+      reservation_id: reservationId,
       shipping_address: shippingAddress,
       status: 'paid',
       subtotal_cents: (reservation as { total_cents: number }).total_cents,
@@ -114,8 +122,12 @@ export async function fulfillCheckoutSession(
     .single()
 
   if (orderErr) {
+    console.error(`[webhook] fulfill=fail step=order-insert reservationId=${reservationId} error=${orderErr.message}`)
     return { ok: false, error: `Failed to create order: ${orderErr.message}` }
   }
+
+  const orderId = (order as { id: string }).id
+  console.log(`[webhook] fulfill=order-ok orderId=${orderId} orderNumber=${orderNumber}`)
 
   // 4. Update unit status if a unit was assigned (non-critical after order creation)
   if ((reservation as { unit_id: string | null }).unit_id) {
@@ -125,7 +137,7 @@ export async function fulfillCheckoutSession(
       .eq('id', (reservation as { unit_id: string }).unit_id)
 
     if (unitErr) {
-      console.error(`Unit status update failed for unit ${(reservation as { unit_id: string }).unit_id}:`, unitErr.message)
+      console.error(`[webhook] fulfill=warn step=unit-update unitId=${(reservation as { unit_id: string }).unit_id} error=${unitErr.message}`)
       // Non-fatal: order was already created, reservation is paid. Log and continue.
     }
   }
@@ -141,15 +153,15 @@ export async function fulfillCheckoutSession(
       (reservation as { customer_email: string }).customer_email ??
       session.customer_email ??
       '',
-    reservationId: (reservation as { id: string }).id,
-    orderId: (order as { id: string }).id,
+    reservationId,
+    orderId,
     productName: (productRow as { name: string } | null)?.name ?? 'NAVO Rental',
     startDate: (reservation as { start_date: string | null }).start_date ?? null,
     endDate: (reservation as { end_date: string | null }).end_date ?? null,
     totalCents: (reservation as { total_cents: number }).total_cents,
   })
   void sendEmail(confirmedEmail.to, confirmedEmail.subject, confirmedEmail.html)
-    .catch((err) => console.error('[email] bookingConfirmed failed:', err))
+    .catch((err) => console.error(`[webhook] fulfill=warn step=email-send error=${err}`))
 
-  return { ok: true, orderId: (order as { id: string }).id }
+  return { ok: true, orderId }
 }

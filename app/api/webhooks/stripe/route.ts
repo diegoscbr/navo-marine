@@ -14,6 +14,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const sig = req.headers.get('stripe-signature')
 
   if (!sig) {
+    console.error('[webhook] sig=fail reason=missing-stripe-signature-header')
     return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 })
   }
 
@@ -27,18 +28,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     )
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('Stripe webhook signature verification failed:', message)
+    console.error(`[webhook] sig=fail reason=${message}`)
     return NextResponse.json(
       { error: `Webhook signature verification failed: ${message}` },
       { status: 400 },
     )
   }
 
+  console.log(`[webhook] received id=${event.id} type=${event.type}`)
+  console.log(`[webhook] sig=ok`)
+
   // 3. Idempotency — skip if already processed
   const alreadyProcessed = await isEventAlreadyProcessed(event.id)
   if (alreadyProcessed) {
+    console.log(`[webhook] idempotent=skipped event_id=${event.id}`)
     return NextResponse.json({ skipped: true })
   }
+  console.log(`[webhook] idempotent=new`)
 
   // 4. Handle event types
   switch (event.type) {
@@ -47,11 +53,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       const result = await fulfillCheckoutSession(session)
 
       if (!result.ok) {
-        console.error('fulfillCheckoutSession failed:', result.error)
+        console.error(`[webhook] fulfill=fail error=${result.error}`)
         // Return 500 so Stripe retries the webhook
         // Do NOT log the event — prevents retry-skipping if fulfillment fails
         return NextResponse.json({ error: result.error }, { status: 500 })
       }
+
+      console.log(`[webhook] fulfill=ok orderId=${result.orderId}`)
 
       // 5. Log AFTER fulfillment succeeds — prevents retry-skipping on partial failure
       await logStripeEvent(event)
@@ -61,6 +69,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     default:
       // Log unhandled events for audit, then acknowledge
+      console.log(`[webhook] dispatch=default-passthrough type=${event.type}`)
       await logStripeEvent(event)
       return NextResponse.json({ received: true })
   }

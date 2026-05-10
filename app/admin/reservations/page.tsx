@@ -5,6 +5,7 @@ import { PackageUnitAssignment } from './PackageUnitAssignment'
 import { availableUnitsForReservation } from '@/lib/admin/unit-availability'
 import { DeleteReservationButton } from './DeleteReservationButton'
 import { SendInvoiceButton } from './SendInvoiceButton'
+import { ExportCsvButton } from './ExportCsvButton'
 
 export const metadata: Metadata = {
   title: 'Reservations | NAVO Admin',
@@ -165,11 +166,14 @@ export default async function AdminReservationsPage() {
   return (
     <div className="mx-auto max-w-5xl">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="font-heading text-2xl font-semibold text-white">Reservations</h1>
-        <p className="mt-1 text-sm text-white/40">
-          {rows.length} reservation{rows.length !== 1 ? 's' : ''}
-        </p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-heading text-2xl font-semibold text-white">Reservations</h1>
+          <p className="mt-1 text-sm text-white/40">
+            {rows.length} reservation{rows.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <ExportCsvButton />
       </div>
 
       {/* Status summary */}

@@ -1,6 +1,4 @@
 import type { Metadata } from 'next'
-import { redirect } from 'next/navigation'
-import { auth } from '@/lib/auth'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { listPackageProducts } from '@/lib/db/packages'
@@ -12,11 +10,6 @@ export const metadata: Metadata = {
 }
 
 export default async function PackagesPage() {
-  const session = await auth()
-  if (!session?.user) {
-    redirect('/login?callbackUrl=/packages')
-  }
-
   const products = await listPackageProducts()
 
   return (

@@ -55,7 +55,7 @@ async function loadRentalCustomRow(windowId: string, productId: string): Promise
       products!inner(name),
       date_windows!inner(label, start_date, end_date)
     `)
-    .eq('window_id', windowId)
+    .eq('date_window_id', windowId)
     .eq('product_id', productId)
     .single()
   return (data as WindowJoinedRow | null) ?? null

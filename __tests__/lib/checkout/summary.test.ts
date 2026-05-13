@@ -31,15 +31,25 @@ const supabaseAdmin = supabaseAdminImpl as unknown as { from: jest.Mock }
 
 type Result = { data: unknown; error: unknown }
 
-function mockSingleQuery(table: string, result: Result) {
-  supabaseAdmin.from.mockImplementation((t: string) => {
-    if (t !== table) return mockBuilder({ data: null, error: null })
-    return mockBuilder(result)
-  })
+type MockBuilder = {
+  select: jest.Mock
+  eq: jest.Mock
+  single: jest.Mock
+  maybeSingle: jest.Mock
 }
 
-function mockBuilder(result: Result): Record<string, unknown> {
-  const builder: Record<string, unknown> = {
+function mockSingleQuery(table: string, result: Result): () => MockBuilder {
+  const builders: Record<string, MockBuilder> = {}
+  supabaseAdmin.from.mockImplementation((t: string) => {
+    if (t !== table) return mockBuilder({ data: null, error: null })
+    if (!builders[t]) builders[t] = mockBuilder(result)
+    return builders[t]
+  })
+  return () => builders[table]
+}
+
+function mockBuilder(result: Result): MockBuilder {
+  const builder: MockBuilder = {
     select: jest.fn().mockReturnThis(),
     eq: jest.fn().mockReturnThis(),
     single: jest.fn().mockResolvedValue(result),
@@ -96,7 +106,7 @@ describe('loadOrderSummary — rental_event', () => {
   it('per-day rate × (inclusive eventDays + extra_days)', async () => {
     // daysBetween('2026-04-10','2026-04-12') === 3 (inclusive).
     // per-day = 5000, extra_days = 1 → total = 5000 × (3 + 1) = 20000.
-    mockSingleQuery('rental_event_products', {
+    const getBuilder = mockSingleQuery('rental_event_products', {
       data: {
         rental_price_cents: 99999,
         rental_price_per_day_cents: 5000,
@@ -114,6 +124,11 @@ describe('loadOrderSummary — rental_event', () => {
       extra_days: 1,
     })
     expect(summary!.totalCents).toBe(20000)
+    // Guard the query against column-name regressions (rental_event_products
+    // uses event_id + product_id — see supabase/migrations/001_initial_schema.sql).
+    const builder = getBuilder()
+    expect(builder.eq).toHaveBeenCalledWith('event_id', 'e1')
+    expect(builder.eq).toHaveBeenCalledWith('product_id', 'p1')
   })
 
   it('returns null when the joined row is missing', async () => {
@@ -134,7 +149,7 @@ describe('loadOrderSummary — rental_custom', () => {
   it('per-day rate × (inclusive windowDays + extra_days)', async () => {
     // daysBetween('2026-06-01','2026-06-04') === 4 (inclusive).
     // per-day = 4000, extra_days = 0 → total = 16000.
-    mockSingleQuery('date_window_allocations', {
+    const getBuilder = mockSingleQuery('date_window_allocations', {
       data: {
         rental_price_cents: 12000,
         rental_price_per_day_cents: 4000,
@@ -154,6 +169,11 @@ describe('loadOrderSummary — rental_custom', () => {
     expect(summary!.contextLabel).toBe('Reservation')
     expect(summary!.totalCents).toBe(16000)
     expect(summary!.lineItems.some((li) => li.label.includes('Summer Charter'))).toBe(true)
+    // Guard the query against column-name regressions (date_window_allocations
+    // uses date_window_id + product_id — see supabase/migrations/001_initial_schema.sql).
+    const builder = getBuilder()
+    expect(builder.eq).toHaveBeenCalledWith('date_window_id', 'w1')
+    expect(builder.eq).toHaveBeenCalledWith('product_id', 'p1')
   })
 })
 

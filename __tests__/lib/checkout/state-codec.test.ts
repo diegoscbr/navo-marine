@@ -191,4 +191,10 @@ describe('isSafeCallbackUrl', () => {
     expect(isSafeCallbackUrl('/../etc/passwd')).toBe(false)
     expect(isSafeCallbackUrl('/reserve/../admin')).toBe(false)
   })
+
+  it('rejects dot-prefixed paths that browsers may normalize as protocol-relative', () => {
+    expect(isSafeCallbackUrl('/.//evil.com')).toBe(false)
+    expect(isSafeCallbackUrl('/./evil.com')).toBe(false)
+    expect(isSafeCallbackUrl('/.well-known/openid-configuration')).toBe(false)
+  })
 })

@@ -187,6 +187,12 @@ export function isSafeCallbackUrl(url: string): boolean {
   if (url.length === 0) return false
   if (!url.startsWith('/')) return false
 
+  // Reject dot-prefixed paths (`/.//evil.com`, `/.well-known/...`) — the URL
+  // parser keeps our synthetic origin but the browser can resolve `/.//host`
+  // as protocol-relative after normalization. No legitimate callback target
+  // begins with a dot, so reject the whole class.
+  if (url.startsWith('/.')) return false
+
   // Reject control chars (tab/newline/etc.) — some browsers strip them.
   for (let i = 0; i < url.length; i++) {
     if (url.charCodeAt(i) < 0x20) return false

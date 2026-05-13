@@ -52,6 +52,22 @@ describe('GET /api/packages/availability', () => {
     const res = await GET(makeRequest({ product_id: 'prod-uuid', start_date: '2027-02-01', end_date: '2027-02-03' }))
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body).toEqual({ available: true, reserved: 0, capacity: 2, remaining: 2 })
+    expect(body).toEqual({ available: true, remaining: 2 })
+  })
+
+  it('does NOT leak reserved or capacity to anonymous callers', async () => {
+    const { supabaseAdmin } = require('@/lib/db/client')
+    ;(supabaseAdmin.from as jest.Mock).mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: { capacity: 10 }, error: null }),
+    })
+    mockCheck.mockResolvedValue({ available: true, reserved: 7, capacity: 10, remaining: 3 })
+
+    const res = await GET(makeRequest({ product_id: 'prod-uuid', start_date: '2027-03-01', end_date: '2027-03-05' }))
+    const body = await res.json()
+    expect(body).not.toHaveProperty('reserved')
+    expect(body).not.toHaveProperty('capacity')
+    expect(body).toEqual({ available: true, remaining: 3 })
   })
 })

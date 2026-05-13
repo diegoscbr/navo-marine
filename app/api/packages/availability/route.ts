@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       endDate,
       (product as { capacity: number }).capacity,
     )
-    return NextResponse.json(result)
+    return NextResponse.json({ available: result.available, remaining: result.remaining })
   } catch (err) {
     console.error('[api/packages/availability] error:', err)
     return NextResponse.json({ error: 'Availability check failed' }, { status: 503 })

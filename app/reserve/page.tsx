@@ -1,6 +1,4 @@
 import type { Metadata } from 'next'
-import { redirect } from 'next/navigation'
-import { auth } from '@/lib/auth'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { listActiveRentalEvents, listActiveDateWindows } from '@/lib/db/events'
@@ -15,12 +13,6 @@ export const metadata: Metadata = {
 const ATLAS2_PRODUCT_ID = process.env.ATLAS2_PRODUCT_ID ?? '6f303d86-5763-4ece-aaad-b78d17852f8a'
 
 export default async function ReservePage() {
-  const session = await auth()
-
-  if (!session?.user) {
-    redirect('/login?callbackUrl=/reserve')
-  }
-
   const [events, windows] = await Promise.all([
     listActiveRentalEvents(),
     listActiveDateWindows(),

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { listActiveRentalEvents, listActiveDateWindows } from '@/lib/db/events'
@@ -31,11 +32,13 @@ export default async function ReservePage() {
           </p>
         </div>
 
-        <ReserveBookingUI
-          events={events}
-          windows={windows}
-          defaultProductId={ATLAS2_PRODUCT_ID}
-        />
+        <Suspense fallback={null}>
+          <ReserveBookingUI
+            events={events}
+            windows={windows}
+            defaultProductId={ATLAS2_PRODUCT_ID}
+          />
+        </Suspense>
       </main>
       <Footer />
     </>

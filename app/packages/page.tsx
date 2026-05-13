@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { listPackageProducts } from '@/lib/db/packages'
@@ -24,7 +25,9 @@ export default async function PackagesPage() {
             Professional race committee equipment and management services, bookable by the day.
           </p>
         </div>
-        <PackagesUI products={products} />
+        <Suspense fallback={null}>
+          <PackagesUI products={products} />
+        </Suspense>
       </main>
       <Footer />
     </>

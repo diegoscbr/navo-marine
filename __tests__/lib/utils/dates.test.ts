@@ -37,18 +37,24 @@ describe('isValidDate', () => {
 })
 
 describe('formatDateRange', () => {
-  it('formats a multi-day range', () => {
-    const result = formatDateRange('2026-03-20', '2026-03-24')
-    expect(result).toContain('Mar')
-    expect(result).toContain('20')
-    expect(result).toContain('24')
-    expect(result).toContain('2026')
+  it('formats same-day as a single date with year', () => {
+    expect(formatDateRange('2026-03-20', '2026-03-20')).toBe('Mar 20, 2026')
   })
 
-  it('formats a same-day range without dash', () => {
-    const result = formatDateRange('2026-03-20', '2026-03-20')
-    expect(result).toContain('Mar 20')
-    expect(result).toContain('2026')
-    expect(result).not.toContain('–')
+  it('formats same month + year as a compressed range', () => {
+    expect(formatDateRange('2026-03-20', '2026-03-24')).toBe('Mar 20–24, 2026')
+  })
+
+  it('formats same year, different month as two dates', () => {
+    expect(formatDateRange('2026-03-28', '2026-04-02')).toBe('Mar 28 – Apr 2, 2026')
+  })
+
+  it('formats different years with full dates on both sides', () => {
+    expect(formatDateRange('2025-12-30', '2026-01-05')).toBe('Dec 30, 2025 – Jan 5, 2026')
+  })
+
+  it('never emits the broken "year (day: N)" intl artifact', () => {
+    expect(formatDateRange('2026-06-25', '2026-06-27')).not.toMatch(/day:/i)
+    expect(formatDateRange('2026-06-25', '2026-06-27')).toBe('Jun 25–27, 2026')
   })
 })

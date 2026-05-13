@@ -34,4 +34,15 @@ describe('GoogleSignInButton', () => {
     const svg = container.querySelector('svg')
     expect(svg).toBeInTheDocument()
   })
+
+  it('passes the callbackUrl prop straight through to signIn (no /auth/redirect indirection)', () => {
+    const cb = '/reserve?reservation_type=rental_event&product_id=p1&event_id=e1&sail_number=US-1'
+    render(<GoogleSignInButton callbackUrl={cb} />)
+    fireEvent.click(screen.getByRole('button', { name: /sign in with google/i }))
+    expect(signIn).toHaveBeenCalledWith(
+      'google',
+      { callbackUrl: cb },
+      { prompt: 'select_account' }
+    )
+  })
 })

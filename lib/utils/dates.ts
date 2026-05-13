@@ -28,19 +28,49 @@ export function isValidDate(dateStr: string): boolean {
 }
 
 /**
- * Human-readable date range label, e.g. "Mar 20–24, 2026" or "Mar 20, 2026".
+ * Human-readable date range label.
+ * Examples:
+ *   Same day:                "Mar 20, 2026"
+ *   Same month + year:       "Mar 20–24, 2026"
+ *   Same year, diff month:   "Mar 28 – Apr 2, 2026"
+ *   Different years:         "Dec 30, 2025 – Jan 5, 2026"
  * Parses as noon UTC to prevent off-by-one display in US timezones.
  */
 export function formatDateRange(startDate: string, endDate: string): string {
   const start = new Date(startDate + 'T12:00:00Z')
   const end = new Date(endDate + 'T12:00:00Z')
-  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' }
 
   if (startDate === endDate) {
-    return start.toLocaleDateString('en-US', opts)
+    return start.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
   }
 
-  const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  const endStr = end.toLocaleDateString('en-US', { day: 'numeric', year: 'numeric' })
-  return `${startStr}–${endStr}`
+  const sameMonthAndYear =
+    start.getUTCMonth() === end.getUTCMonth() &&
+    start.getUTCFullYear() === end.getUTCFullYear()
+  const sameYear = start.getUTCFullYear() === end.getUTCFullYear()
+
+  if (sameMonthAndYear) {
+    // "Mar 20–24, 2026"
+    const monthDayStart = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    const dayEnd = end.toLocaleDateString('en-US', { day: 'numeric' })
+    const year = start.toLocaleDateString('en-US', { year: 'numeric' })
+    return `${monthDayStart}–${dayEnd}, ${year}`
+  }
+
+  if (sameYear) {
+    // "Mar 28 – Apr 2, 2026"
+    const monthDayStart = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    const monthDayEnd = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    const year = start.toLocaleDateString('en-US', { year: 'numeric' })
+    return `${monthDayStart} – ${monthDayEnd}, ${year}`
+  }
+
+  // "Dec 30, 2025 – Jan 5, 2026"
+  const full = (d: Date) =>
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return `${full(start)} – ${full(end)}`
 }

@@ -5,6 +5,11 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useSession } from 'next-auth/react'
 import type { StorefrontProduct } from '@/lib/commerce/types'
+import {
+  buildLoginUrl,
+  type PurchaseSelection,
+} from '@/lib/checkout/state-codec'
+import { useRehydrateSelection } from '@/lib/checkout/use-rehydrate-selection'
 
 function formatUSD(cents: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100)
@@ -15,12 +20,19 @@ type ProductPurchasePanelProps = {
 }
 
 export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
-  const { data: sessionData } = useSession()
+  const { data: sessionData, status } = useSession()
   const [quantity, setQuantity] = useState(1)
   const [warrantySelected, setWarrantySelected] = useState(true)
   const [confirmationEmail, setConfirmationEmail] = useState('')
   const [purchasing, setPurchasing] = useState(false)
   const [purchaseError, setPurchaseError] = useState<string | null>(null)
+
+  useRehydrateSelection((selection) => {
+    if (selection.reservation_type !== 'purchase') return
+    if (selection.product_id !== product.slug) return
+    if (selection.quantity > 0 && selection.quantity <= 8) setQuantity(selection.quantity)
+    setWarrantySelected(selection.warranty_selected)
+  })
 
   const warranty = product.addOns.find((addon) => addon.slug === 'vakaros-care-warranty')
 
@@ -37,6 +49,17 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   const emailToUse = confirmationEmail.trim() || sessionData?.user?.email || ''
 
   async function handleCheckout() {
+    if (status === 'loading') return
+    if (status === 'unauthenticated') {
+      const selection: PurchaseSelection = {
+        reservation_type: 'purchase',
+        product_id: product.slug,
+        quantity,
+        warranty_selected: warrantySelected,
+      }
+      window.location.href = buildLoginUrl(`/products/${product.slug}`, selection)
+      return
+    }
     setPurchasing(true)
     setPurchaseError(null)
     try {
@@ -141,6 +164,16 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
           className="w-full rounded-lg border border-white/10 bg-navy-700/50 px-3 py-2 text-sm text-white placeholder-white/30 focus:border-marine-500/60 focus:outline-none"
         />
       </div>
+      {status === 'unauthenticated' && (
+        <p className="mt-3 text-center text-xs text-white/40">
+          You&rsquo;ll sign in with Google to complete.
+        </p>
+      )}
+      {status === 'authenticated' && sessionData?.user && (
+        <p className="mt-3 text-center text-xs text-white/40">
+          ✓ Signed in as {sessionData.user.email}
+        </p>
+      )}
       <button
         type="button"
         onClick={handleCheckout}

@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { checkPackageAvailability } from '@/lib/db/packages'
 import { supabaseAdmin } from '@/lib/db/client'
 import { isValidDate } from '@/lib/utils/dates'
 
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   const { searchParams } = req.nextUrl
   const productId = searchParams.get('product_id')
   const startDate = searchParams.get('start_date')
@@ -43,7 +37,7 @@ export async function GET(req: NextRequest) {
       endDate,
       (product as { capacity: number }).capacity,
     )
-    return NextResponse.json(result)
+    return NextResponse.json({ available: result.available, remaining: result.remaining })
   } catch (err) {
     console.error('[api/packages/availability] error:', err)
     return NextResponse.json({ error: 'Availability check failed' }, { status: 503 })

@@ -5,6 +5,12 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import type { RentalEvent, DateWindow } from '@/lib/db/events'
 import { daysBetween } from '@/lib/utils/dates'
+import {
+  buildLoginUrl,
+  type RentalEventSelection,
+  type RentalCustomSelection,
+} from '@/lib/checkout/state-codec'
+import { useRehydrateSelection } from '@/lib/checkout/use-rehydrate-selection'
 
 type Props = {
   events: RentalEvent[]
@@ -15,7 +21,7 @@ type Props = {
 const DEFAULT_PRICE_PER_DAY_CENTS = 3500
 
 export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [activeTab, setActiveTab] = useState<'event' | 'custom'>('event')
   const [selectedEventId, setSelectedEventId] = useState('')
   const [sailNumber, setSailNumber] = useState('')
@@ -23,26 +29,42 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
   const [extraDays, setExtraDays] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedWindowId, setSelectedWindowId] = useState('')
+
+  useRehydrateSelection((selection) => {
+    if (selection.reservation_type === 'rental_event') {
+      setActiveTab('event')
+      setSelectedEventId(selection.event_id)
+      setSailNumber(selection.sail_number)
+      if (selection.extra_days !== undefined) setExtraDays(selection.extra_days)
+      return
+    }
+    if (selection.reservation_type === 'rental_custom') {
+      setActiveTab('custom')
+      setSelectedWindowId(selection.date_window_id)
+      setSailNumber(selection.sail_number)
+      if (selection.extra_days !== undefined) setExtraDays(selection.extra_days)
+    }
+  })
 
   // Pre-fill confirmation email from session on first render
   const emailValue = confirmationEmail !== '' ? confirmationEmail : (session?.user?.email ?? '')
-
-  if (!session?.user) {
-    return (
-      <div className="text-center">
-        <p className="text-white/60 mb-4">You must be signed in to reserve.</p>
-        <a href="/login" className="glass-btn glass-btn-primary px-6 py-3 text-sm font-medium">
-          Sign In to Continue
-        </a>
-      </div>
-    )
-  }
 
   const selectedEvent = events.find((e) => e.id === selectedEventId)
   const eventProduct = selectedEvent?.rental_event_products?.find(
     (product) => product.product_id === defaultProductId,
   ) ?? selectedEvent?.rental_event_products?.[0]
   const selectedProductId = eventProduct?.product_id ?? defaultProductId
+
+  // Mirror the event-tab's product_id resolution for the custom-date tab.
+  // A date_window can offer multiple products via date_window_allocations;
+  // prefer the default product (Atlas 2), fall back to the first allocation.
+  const selectedWindow = windows.find((w) => w.id === selectedWindowId)
+  const windowAllocation =
+    selectedWindow?.date_window_allocations?.find(
+      (a) => a.product_id === defaultProductId,
+    ) ?? selectedWindow?.date_window_allocations?.[0]
+  const selectedCustomProductId = windowAllocation?.product_id ?? defaultProductId
 
   const pricePerDay =
     eventProduct?.rental_price_per_day_cents ??
@@ -59,6 +81,33 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
   }
 
   async function handleSubmit() {
+    // Anonymous visitor: redirect to /login carrying selection state.
+    // status === 'loading' = session still resolving; do nothing (rare; user clicks again on hydration).
+    if (status === 'loading') return
+    if (status === 'unauthenticated') {
+      if (activeTab === 'event') {
+        const selection: RentalEventSelection = {
+          reservation_type: 'rental_event',
+          product_id: selectedProductId,
+          event_id: selectedEventId,
+          sail_number: sailNumber.trim(),
+          ...(extraDays > 0 ? { extra_days: extraDays } : {}),
+        }
+        window.location.href = buildLoginUrl('/reserve', selection)
+        return
+      }
+      // custom-date tab
+      const selection: RentalCustomSelection = {
+        reservation_type: 'rental_custom',
+        product_id: selectedCustomProductId,
+        date_window_id: selectedWindowId,
+        sail_number: sailNumber.trim(),
+        ...(extraDays > 0 ? { extra_days: extraDays } : {}),
+      }
+      window.location.href = buildLoginUrl('/reserve', selection)
+      return
+    }
+
     setError(null)
     setLoading(true)
     try {
@@ -228,13 +277,26 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
             <p className="mt-4 text-sm text-red-400">This event does not have a reservable product allocation.</p>
           )}
 
-          <button
-            onClick={handleSubmit}
-            disabled={!canSubmit || loading}
-            className="glass-btn glass-btn-primary mt-8 w-full px-6 py-4 text-sm font-medium tracking-wide disabled:opacity-40"
-          >
-            {loading ? 'Processing...' : 'Reserve & Pay'}
-          </button>
+          <div className="mt-8">
+            {status === 'unauthenticated' && (
+              <p className="mb-2 text-center text-xs text-white/40">
+                You&rsquo;ll sign in with Google to complete.
+              </p>
+            )}
+            {status === 'authenticated' && session?.user && (
+              <p className="mb-2 text-center text-xs text-white/40">
+                ✓ Signed in as {session.user.email}
+              </p>
+            )}
+            {/* during status === 'loading' the slot renders nothing — prevents flash */}
+            <button
+              onClick={handleSubmit}
+              disabled={!canSubmit || loading}
+              className="glass-btn glass-btn-primary w-full px-6 py-4 text-sm font-medium tracking-wide disabled:opacity-40"
+            >
+              {loading ? 'Processing...' : 'Reserve & Pay'}
+            </button>
+          </div>
         </>
       )}
     </div>

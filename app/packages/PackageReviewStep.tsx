@@ -4,6 +4,10 @@ import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import type { PackageProduct } from '@/lib/db/packages'
 import { daysBetween, formatDateRange } from '@/lib/utils/dates'
+import {
+  buildLoginUrl,
+  type RegattaPackageSelection,
+} from '@/lib/checkout/state-codec'
 
 type Props = {
   product: PackageProduct
@@ -13,7 +17,7 @@ type Props = {
 }
 
 export function PackageReviewStep({ product, startDate, endDate, onBack }: Props) {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [confirmationEmail, setConfirmationEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -25,6 +29,17 @@ export function PackageReviewStep({ product, startDate, endDate, onBack }: Props
   const totalCents = dayCount * product.price_per_day_cents
 
   async function handleSubmit() {
+    if (status === 'loading') return
+    if (status === 'unauthenticated') {
+      const selection: RegattaPackageSelection = {
+        reservation_type: 'regatta_package',
+        product_id: product.id,
+        start_date: startDate,
+        end_date: endDate,
+      }
+      window.location.href = buildLoginUrl('/packages', selection)
+      return
+    }
     setError(null)
     setLoading(true)
     try {
@@ -105,6 +120,16 @@ export function PackageReviewStep({ product, startDate, endDate, onBack }: Props
         <p className="mt-4 text-sm text-red-400 text-center">{error}</p>
       )}
 
+      {status === 'unauthenticated' && (
+        <p className="mb-2 text-center text-xs text-white/40">
+          You&rsquo;ll sign in with Google to complete.
+        </p>
+      )}
+      {status === 'authenticated' && session?.user && (
+        <p className="mb-2 text-center text-xs text-white/40">
+          ✓ Signed in as {session.user.email}
+        </p>
+      )}
       <div className="flex gap-4 mt-6">
         <button
           onClick={onBack}

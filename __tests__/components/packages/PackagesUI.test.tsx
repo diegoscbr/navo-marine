@@ -2,6 +2,12 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { PackagesUI } from '@/app/packages/PackagesUI'
 import type { PackageProduct } from '@/lib/db/packages'
 
+// useRehydrateSelection (inside PackagesUI) calls useSearchParams; mock to an
+// empty params object so the hook is a no-op and doesn't fight the test's setup.
+jest.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+}))
+
 const mockProducts: PackageProduct[] = [
   {
     id: 'prod-1',

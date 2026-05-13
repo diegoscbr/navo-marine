@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { PackageProduct } from '@/lib/db/packages'
+import { useRehydrateSelection } from '@/lib/checkout/use-rehydrate-selection'
 import { PackageCards } from './PackageCards'
 import { DateRangePicker } from './DateRangePicker'
 import { PackageReviewStep } from './PackageReviewStep'
@@ -17,6 +18,16 @@ export function PackagesUI({ products }: Props) {
   const [selectedProduct, setSelectedProduct] = useState<PackageProduct | null>(null)
   const [startDate, setStartDate] = useState<string>('')
   const [endDate, setEndDate] = useState<string>('')
+
+  useRehydrateSelection((selection) => {
+    if (selection.reservation_type !== 'regatta_package') return
+    const product = products.find((p) => p.id === selection.product_id)
+    if (!product) return
+    setSelectedProduct(product)
+    setStartDate(selection.start_date)
+    setEndDate(selection.end_date)
+    setStep(3)
+  })
 
   if (products.length === 0) {
     return (

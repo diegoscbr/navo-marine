@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { useSession, signOut } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 import { Navbar } from '@/components/layout/Navbar'
 
 jest.mock('next/navigation', () => ({ usePathname: () => '/' }))
@@ -45,11 +45,30 @@ describe('Navbar', () => {
     expect(link).toHaveAttribute('href', '/reserve')
   })
 
-  it('renders Login button pointing to /login', () => {
+  it('renders a subtle Sign in text link for anonymous visitors', () => {
+    ;(useSession as jest.Mock).mockReturnValue({ data: null })
     render(<Navbar />)
-    const link = screen.getByRole('link', { name: /login/i })
-    expect(link).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: /^sign in$/i })
     expect(link).toHaveAttribute('href', '/login')
+  })
+
+  it('renders the account menu trigger but no Sign in link for signed-in customers', () => {
+    ;(useSession as jest.Mock).mockReturnValue({
+      data: { user: { name: 'Alice', email: 'alice@example.com', image: null } },
+    })
+    render(<Navbar />)
+    expect(screen.queryByRole('link', { name: /^sign in$/i })).toBeNull()
+    expect(screen.getByRole('button', { name: /account menu/i })).toBeInTheDocument()
+  })
+
+  it('renders the Admin pill + account menu for @navomarine.com users', () => {
+    ;(useSession as jest.Mock).mockReturnValue({
+      data: { user: { name: 'Diego', email: 'diego@navomarine.com', image: null } },
+    })
+    render(<Navbar />)
+    const adminLink = screen.getByRole('link', { name: /^admin$/i })
+    expect(adminLink).toHaveAttribute('href', '/admin')
+    expect(screen.getByRole('button', { name: /account menu/i })).toBeInTheDocument()
   })
 
   it('does NOT render Partner With NAVO button', () => {
@@ -80,9 +99,9 @@ describe('Navbar — unauthenticated', () => {
     ;(useSession as jest.Mock).mockReturnValue({ data: null, status: 'unauthenticated' })
   })
 
-  it('renders Login link when no session', () => {
+  it('renders Sign in link when no session', () => {
     render(<Navbar />)
-    expect(screen.getByRole('link', { name: /login/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^sign in$/i })).toBeInTheDocument()
   })
 
   it('does not render Sign Out button when no session', () => {
@@ -105,20 +124,14 @@ describe('Navbar — authenticated', () => {
     ;(useSession as jest.Mock).mockReturnValue(mockSession)
   })
 
-  it('renders Sign Out button when session exists', () => {
+  it('renders the account menu trigger when session exists', () => {
     render(<Navbar />)
-    expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /account menu/i })).toBeInTheDocument()
   })
 
-  it('does not render Login link when authenticated', () => {
+  it('does not render Sign in link when authenticated', () => {
     render(<Navbar />)
-    expect(screen.queryByRole('link', { name: /login/i })).not.toBeInTheDocument()
-  })
-
-  it('calls signOut with callbackUrl "/" when Sign Out clicked', () => {
-    render(<Navbar />)
-    fireEvent.click(screen.getByRole('button', { name: /sign out/i }))
-    expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/' })
+    expect(screen.queryByRole('link', { name: /^sign in$/i })).not.toBeInTheDocument()
   })
 })
 
@@ -167,13 +180,13 @@ describe('Navbar — mobile menu', () => {
     expect(screen.getByRole('button', { name: /open menu/i })).toBeInTheDocument()
   })
 
-  it('shows Login in mobile menu when unauthenticated', () => {
+  it('shows Sign in in mobile menu when unauthenticated', () => {
     ;(useSession as jest.Mock).mockReturnValue({ data: null, status: 'unauthenticated' })
     render(<Navbar />)
     fireEvent.click(screen.getByRole('button', { name: /open menu/i }))
 
-    const loginLinks = screen.getAllByRole('link', { name: /login/i })
-    expect(loginLinks.length).toBeGreaterThanOrEqual(1)
+    const signInLinks = screen.getAllByRole('link', { name: /^sign in$/i })
+    expect(signInLinks.length).toBeGreaterThanOrEqual(1)
   })
 
   it('shows Sign Out in mobile menu when authenticated', () => {

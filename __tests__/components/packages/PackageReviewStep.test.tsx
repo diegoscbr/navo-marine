@@ -1,6 +1,9 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { useSession } from 'next-auth/react'
 import { PackageReviewStep } from '@/app/packages/PackageReviewStep'
 import type { PackageProduct } from '@/lib/db/packages'
+
+const mockUseSession = useSession as jest.Mock
 
 const captureProduct: PackageProduct = {
   id: 'prod-1',
@@ -59,6 +62,12 @@ describe('PackageReviewStep', () => {
   })
 
   it('shows error message on failed checkout', async () => {
+    // Auth-branch in handleSubmit redirects when status is unauthenticated;
+    // signed-in session ensures the fetch path runs instead.
+    mockUseSession.mockReturnValue({
+      data: { user: { email: 'tester@example.com' } },
+      status: 'authenticated',
+    })
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,
       json: () => Promise.resolve({ error: 'Package unavailable' }),

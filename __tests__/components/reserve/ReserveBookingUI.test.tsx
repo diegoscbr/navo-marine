@@ -3,6 +3,12 @@ import { useSession } from 'next-auth/react'
 import { ReserveBookingUI } from '@/app/reserve/ReserveBookingUI'
 import type { RentalEvent } from '@/lib/db/events'
 
+// useRehydrateSelection (inside the component) calls useSearchParams; mock to an
+// empty params object so the hook is a no-op and doesn't fight the test's mocks.
+jest.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+}))
+
 const mockUseSession = useSession as jest.Mock
 
 const mockEvents: RentalEvent[] = [

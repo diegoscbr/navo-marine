@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
@@ -80,7 +81,9 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
             <div className="mt-12 grid gap-8 lg:grid-cols-[1fr_360px] lg:items-start">
               <ProductImageGallery images={productViewImages} />
               <div className="lg:sticky lg:top-28 lg:self-start">
-                <ProductPurchasePanel product={product} />
+                <Suspense fallback={null}>
+                  <ProductPurchasePanel product={product} />
+                </Suspense>
               </div>
             </div>
           </div>

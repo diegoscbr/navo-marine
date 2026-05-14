@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { listActiveRentalEvents } from '@/lib/db/events'
 
 jest.mock('@/lib/db/events', () => ({
   listActiveRentalEvents: jest.fn(),
@@ -7,13 +8,13 @@ jest.mock('@/components/layout/Navbar', () => ({ Navbar: () => <nav /> }))
 jest.mock('@/components/layout/Footer', () => ({ Footer: () => <footer /> }))
 jest.mock('next/navigation', () => ({ usePathname: () => '/capabilities' }))
 
-const { listActiveRentalEvents } = require('@/lib/db/events') as {
-  listActiveRentalEvents: jest.Mock
-}
+const mockListActive = listActiveRentalEvents as jest.MockedFunction<
+  typeof listActiveRentalEvents
+>
 
 describe('/capabilities page', () => {
   beforeEach(() => {
-    listActiveRentalEvents.mockResolvedValue([])
+    mockListActive.mockResolvedValue([])
   })
 
   it('renders the mission hero heading', async () => {
@@ -39,7 +40,7 @@ describe('/capabilities page', () => {
   })
 
   it('hides the upcoming-events section when there are no active events', async () => {
-    listActiveRentalEvents.mockResolvedValue([])
+    mockListActive.mockResolvedValue([])
     const CapabilitiesPage = (await import('@/app/capabilities/page')).default
     const jsx = await CapabilitiesPage()
     render(jsx as React.ReactElement)

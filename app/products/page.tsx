@@ -176,7 +176,7 @@ export default async function ProductsPage() {
                   Built for race officers.
                 </h2>
                 <p className="mx-auto mt-4 max-w-2xl text-base text-white/60">
-                  From a single tablet on the signal boat to a full fleet of Vakaros units and regtta managment
+                  From a single tablet on the signal boat to a full fleet of Vakaros units and regatta management
                   services, pick the package that matches your event.
                 </p>
               </div>

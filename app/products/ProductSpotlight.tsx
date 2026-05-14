@@ -60,7 +60,7 @@ export function ProductSpotlight({
           className="text-center"
         >
           {eyebrowLogo ? (
-            <div className="mx-auto -my-16 flex h-48 items-center justify-center sm:-my-20 sm:h-56 lg:-my-24 lg:h-64">
+            <div className="mx-auto -mt-12 -mb-24 flex h-60 items-center justify-center sm:-mt-16 sm:-mb-28 sm:h-64 lg:-mt-20 lg:-mb-32 lg:h-80">
               <Image
                 src={eyebrowLogo}
                 alt={eyebrowLogoAlt ?? eyebrow}

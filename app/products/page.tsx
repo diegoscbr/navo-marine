@@ -42,7 +42,7 @@ const PRODUCT_DISPLAY: Record<string, ProductDisplay> = {
     eyebrow: 'Vakaros Atlas 2',
     eyebrowLogo: '/partners/2.png',
     eyebrowLogoAlt: 'Vakaros',
-    tagline: 'Race-grade instrumentation in your hand.',
+    tagline: 'The Future of Sailing Technology.',
     description:
       'Centimeter-accurate GNSS, an intelligent compass, and start-line guidance — engineered for the fastest decisions on the water.',
     bullets: [
@@ -176,8 +176,8 @@ export default async function ProductsPage() {
                   Built for race officers.
                 </h2>
                 <p className="mx-auto mt-4 max-w-2xl text-base text-white/60">
-                  From a single tablet on the signal boat to a fully staffed race
-                  committee, pick the package that matches your event.
+                  From a single tablet on the signal boat to a full fleet of Vakaros units and regtta managment
+                  services, pick the package that matches your event.
                 </p>
               </div>
 

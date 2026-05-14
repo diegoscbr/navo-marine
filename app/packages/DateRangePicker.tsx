@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { DayPicker, type DateRange } from 'react-day-picker'
 import type { PackageProduct } from '@/lib/db/packages'
 import { daysBetween, formatDateRange } from '@/lib/utils/dates'
@@ -13,14 +13,18 @@ type Props = {
 
 type AvailabilityState = 'idle' | 'checking' | 'available' | 'unavailable'
 
+type FetchResult =
+  | { kind: 'success'; startDate: string; endDate: string; available: boolean }
+  | { kind: 'error'; startDate: string; endDate: string }
+  | null
+
 function toISODate(date: Date): string {
   return date.toISOString().split('T')[0]
 }
 
 export function DateRangePicker({ product, onNext, onBack }: Props) {
   const [range, setRange] = useState<DateRange | undefined>()
-  const [availability, setAvailability] = useState<AvailabilityState>('idle')
-  const [advanceError, setAdvanceError] = useState<string | null>(null)
+  const [fetchResult, setFetchResult] = useState<FetchResult>(null)
   const [error, setError] = useState<string | null>(null)
 
   const startDate = range?.from ? toISODate(range.from) : null
@@ -29,52 +33,74 @@ export function DateRangePicker({ product, onNext, onBack }: Props) {
   const dayCount = startDate && endDate ? daysBetween(startDate, endDate) : null
   const totalCents = dayCount ? dayCount * product.price_per_day_cents : null
 
-  // Advance booking check
-  useEffect(() => {
-    if (!startDate || !product.min_advance_booking_days) {
-      setAdvanceError(null)
-      return
-    }
+  // Derived: advance-booking validation. Date.now() is intentionally read at
+  // render time so the warning updates as the clock crosses the threshold —
+  // tearing on a millisecond boundary is acceptable for this UI.
+  let advanceError: string | null = null
+  if (startDate && product.min_advance_booking_days) {
     const daysUntil = Math.floor(
+      // eslint-disable-next-line react-hooks/purity
       (new Date(startDate + 'T12:00:00Z').getTime() - Date.now()) / (1000 * 60 * 60 * 24),
     )
     if (daysUntil < product.min_advance_booking_days) {
-      setAdvanceError(
-        `${product.name} requires ${product.min_advance_booking_days} days advance booking. Please choose a start date at least ${product.min_advance_booking_days} days from today.`,
-      )
-    } else {
-      setAdvanceError(null)
+      advanceError = `${product.name} requires ${product.min_advance_booking_days} days advance booking. Please choose a start date at least ${product.min_advance_booking_days} days from today.`
     }
-  }, [startDate, product.min_advance_booking_days, product.name])
+  }
 
-  // Availability check when full range is selected
-  const checkAvailability = useCallback(async () => {
-    if (!startDate || !endDate) return
-    setAvailability('checking')
-    try {
-      const res = await fetch(
-        `/api/packages/availability?product_id=${product.id}&start_date=${startDate}&end_date=${endDate}`,
-      )
-      if (!res.ok) {
-        setAvailability('idle')
-        setError('Failed to check availability. Please try again.')
-        return
-      }
-      const data = await res.json()
-      setAvailability(data.available ? 'available' : 'unavailable')
-    } catch {
-      setAvailability('idle')
-      setError('Failed to check availability. Please try again.')
-    }
-  }, [startDate, endDate, product.id])
+  // Derived: availability state from inputs + last fetch result.
+  const fetchMatchesInputs =
+    fetchResult !== null &&
+    startDate !== null &&
+    endDate !== null &&
+    fetchResult.startDate === startDate &&
+    fetchResult.endDate === endDate
+  let availability: AvailabilityState
+  if (!startDate || !endDate || advanceError) {
+    availability = 'idle'
+  } else if (fetchMatchesInputs && fetchResult?.kind === 'success') {
+    availability = fetchResult.available ? 'available' : 'unavailable'
+  } else if (fetchMatchesInputs && fetchResult?.kind === 'error') {
+    availability = 'idle'
+  } else {
+    availability = 'checking'
+  }
 
+  // Effect: fetch availability when inputs are complete and valid.
+  // All setState calls happen inside the async callback, after await.
   useEffect(() => {
-    if (startDate && endDate && !advanceError) {
-      checkAvailability()
-    } else {
-      setAvailability('idle')
+    if (!startDate || !endDate || advanceError) return
+
+    let cancelled = false
+
+    fetch(
+      `/api/packages/availability?product_id=${product.id}&start_date=${startDate}&end_date=${endDate}`,
+    )
+      .then(async (res) => {
+        if (cancelled) return
+        if (!res.ok) {
+          setFetchResult({ kind: 'error', startDate, endDate })
+          setError('Failed to check availability. Please try again.')
+          return
+        }
+        const data = await res.json()
+        if (cancelled) return
+        setFetchResult({
+          kind: 'success',
+          startDate,
+          endDate,
+          available: Boolean(data.available),
+        })
+      })
+      .catch(() => {
+        if (cancelled) return
+        setFetchResult({ kind: 'error', startDate, endDate })
+        setError('Failed to check availability. Please try again.')
+      })
+
+    return () => {
+      cancelled = true
     }
-  }, [startDate, endDate, advanceError, checkAvailability])
+  }, [startDate, endDate, advanceError, product.id])
 
   const canProceed = startDate && endDate && availability === 'available' && !advanceError
 

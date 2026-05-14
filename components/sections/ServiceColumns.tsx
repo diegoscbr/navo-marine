@@ -14,8 +14,7 @@ export function ServiceColumns() {
             <motion.div
               key={col.title}
               initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
               className="rounded-xl border border-white/10 bg-navy-800/60 p-8"
             >

@@ -12,8 +12,7 @@ export function StatsBand() {
             <motion.div
               key={tile.label}
               initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: i * 0.08 }}
               className="text-center"
             >

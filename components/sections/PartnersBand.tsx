@@ -15,8 +15,7 @@ export function PartnersBand() {
             <motion.div
               key={p.name}
               initial={{ opacity: 0, y: 8 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: i * 0.08 }}
               className="flex flex-col items-center gap-3"
             >

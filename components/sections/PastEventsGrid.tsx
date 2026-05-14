@@ -15,8 +15,7 @@ export function PastEventsGrid() {
             <motion.div
               key={event.slug}
               initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: i * 0.05 }}
               className="overflow-hidden rounded-xl border border-white/10 bg-navy-900"
             >

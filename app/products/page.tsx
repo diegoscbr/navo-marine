@@ -3,7 +3,6 @@ import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { listStorefrontProducts } from '@/lib/db/storefront'
 import type { StorefrontProduct } from '@/lib/commerce/types'
-import { ProductsHeader } from './ProductsHeader'
 import { ProductSpotlight } from './ProductSpotlight'
 import { ProductTile } from './ProductTile'
 
@@ -21,6 +20,8 @@ export const metadata: Metadata = {
 
 type ProductDisplay = {
   eyebrow: string
+  eyebrowLogo?: string
+  eyebrowLogoAlt?: string
   tagline: string
   description: string
   bullets: string[]
@@ -39,6 +40,8 @@ type ProductDisplay = {
 const PRODUCT_DISPLAY: Record<string, ProductDisplay> = {
   'atlas-2': {
     eyebrow: 'Vakaros Atlas 2',
+    eyebrowLogo: '/partners/2.png',
+    eyebrowLogoAlt: 'Vakaros',
     tagline: 'Race-grade instrumentation in your hand.',
     description:
       'Centimeter-accurate GNSS, an intelligent compass, and start-line guidance — engineered for the fastest decisions on the water.',
@@ -142,11 +145,11 @@ export default async function ProductsPage() {
     <>
       <Navbar />
       <main className="bg-navy-900 pb-24">
-        <ProductsHeader />
-
         {spotlight && (
           <ProductSpotlight
             eyebrow={spotlight.display.eyebrow}
+            eyebrowLogo={spotlight.display.eyebrowLogo}
+            eyebrowLogoAlt={spotlight.display.eyebrowLogoAlt}
             name={spotlight.product.name}
             tagline={spotlight.display.tagline}
             description={spotlight.display.description}

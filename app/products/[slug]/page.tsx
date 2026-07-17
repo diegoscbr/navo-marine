@@ -13,6 +13,9 @@ type ProductPageProps = {
   params: Promise<{ slug: string }>
 }
 
+// Product details are admin-managed — render per request, never prerender
+export const dynamic = 'force-dynamic'
+
 function formatUSD(cents: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100)
 }

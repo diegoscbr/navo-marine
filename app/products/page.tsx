@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   },
 }
 
+// Product catalog is admin-managed — render per request, never prerender
+export const dynamic = 'force-dynamic'
+
 type ProductDisplay = {
   eyebrow: string
   eyebrowLogo?: string

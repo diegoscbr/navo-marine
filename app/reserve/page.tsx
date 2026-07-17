@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   description: 'Book your Vakaros Atlas 2 rental for an upcoming event or custom dates.',
 }
 
+// Events/windows are admin-managed — render per request, never prerender
+export const dynamic = 'force-dynamic'
+
 // The default product ID for Atlas 2 — seeded in Phase 1
 const ATLAS2_PRODUCT_ID = process.env.ATLAS2_PRODUCT_ID ?? '6f303d86-5763-4ece-aaad-b78d17852f8a'
 

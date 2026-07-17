@@ -173,6 +173,181 @@ describe('DELETE /api/admin/reservations/[id]', () => {
     expect(res.status).toBe(204)
   })
 
+  it('allows delete of reserved_paid rental_event reservation whose event has ended', async () => {
+    auth.mockResolvedValue(ADMIN_SESSION)
+    const reservation = {
+      id: 'r1',
+      status: 'reserved_paid',
+      end_date: null,
+      event_id: 'e1',
+      rental_events: { end_date: '2020-01-01' },
+    }
+
+    const resChain = makeChain({
+      single: jest.fn().mockResolvedValue({ data: reservation, error: null }),
+    })
+    const ordersChain = makeChain({
+      eq: jest.fn().mockResolvedValue({ error: null }),
+    })
+    const deleteChain = makeChain({
+      eq: jest.fn().mockResolvedValue({ error: null }),
+    })
+
+    let reservationCallCount = 0
+    supabaseAdmin.from.mockImplementation((table: string) => {
+      reservationCallCount =
+        table === 'reservations' ? reservationCallCount + 1 : reservationCallCount
+      if (table === 'reservations') {
+        return reservationCallCount === 1 ? resChain : deleteChain
+      }
+      if (table === 'orders') return ordersChain
+      return makeChain()
+    })
+
+    const { DELETE } = await import(
+      '@/app/api/admin/reservations/[id]/route'
+    )
+    const res = await DELETE(makeReq(), {
+      params: Promise.resolve({ id: 'r1' }),
+    })
+    expect(res.status).toBe(204)
+    expect(resChain.select).toHaveBeenCalledWith(
+      expect.stringContaining('rental_events(end_date)'),
+    )
+    expect(resChain.select).toHaveBeenCalledWith(
+      expect.stringContaining('date_windows(end_date)'),
+    )
+  })
+
+  it('allows delete of reserved_paid rental_custom reservation whose date window has ended', async () => {
+    auth.mockResolvedValue(ADMIN_SESSION)
+    const reservation = {
+      id: 'r1',
+      status: 'reserved_paid',
+      end_date: null,
+      rental_events: null,
+      date_windows: { end_date: '2020-01-01' },
+    }
+
+    const resChain = makeChain({
+      single: jest.fn().mockResolvedValue({ data: reservation, error: null }),
+    })
+    const ordersChain = makeChain({
+      eq: jest.fn().mockResolvedValue({ error: null }),
+    })
+    const deleteChain = makeChain({
+      eq: jest.fn().mockResolvedValue({ error: null }),
+    })
+
+    let reservationCallCount = 0
+    supabaseAdmin.from.mockImplementation((table: string) => {
+      reservationCallCount =
+        table === 'reservations' ? reservationCallCount + 1 : reservationCallCount
+      if (table === 'reservations') {
+        return reservationCallCount === 1 ? resChain : deleteChain
+      }
+      if (table === 'orders') return ordersChain
+      return makeChain()
+    })
+
+    const { DELETE } = await import(
+      '@/app/api/admin/reservations/[id]/route'
+    )
+    const res = await DELETE(makeReq(), {
+      params: Promise.resolve({ id: 'r1' }),
+    })
+    expect(res.status).toBe(204)
+  })
+
+  it('returns 403 for reserved_paid rental_custom reservation whose date window has not ended', async () => {
+    auth.mockResolvedValue(ADMIN_SESSION)
+    const reservation = {
+      id: 'r1',
+      status: 'reserved_paid',
+      end_date: null,
+      rental_events: null,
+      date_windows: { end_date: '2099-12-31' },
+    }
+    const chain = makeChain({
+      single: jest.fn().mockResolvedValue({ data: reservation, error: null }),
+    })
+    supabaseAdmin.from.mockReturnValue(chain)
+    const { DELETE } = await import(
+      '@/app/api/admin/reservations/[id]/route'
+    )
+    const res = await DELETE(makeReq(), {
+      params: Promise.resolve({ id: 'r1' }),
+    })
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 500 without deleting when the orders cleanup update fails', async () => {
+    const consoleError = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {})
+    auth.mockResolvedValue(ADMIN_SESSION)
+    const reservation = {
+      id: 'r1',
+      status: 'cancelled',
+      end_date: null,
+      rental_events: null,
+      date_windows: null,
+    }
+
+    const resChain = makeChain({
+      single: jest.fn().mockResolvedValue({ data: reservation, error: null }),
+    })
+    const ordersChain = makeChain({
+      eq: jest.fn().mockResolvedValue({ error: { message: 'orders update failed' } }),
+    })
+    const deleteChain = makeChain({
+      eq: jest.fn().mockResolvedValue({ error: null }),
+    })
+
+    let reservationCallCount = 0
+    supabaseAdmin.from.mockImplementation((table: string) => {
+      reservationCallCount =
+        table === 'reservations' ? reservationCallCount + 1 : reservationCallCount
+      if (table === 'reservations') {
+        return reservationCallCount === 1 ? resChain : deleteChain
+      }
+      if (table === 'orders') return ordersChain
+      return makeChain()
+    })
+
+    const { DELETE } = await import(
+      '@/app/api/admin/reservations/[id]/route'
+    )
+    const res = await DELETE(makeReq(), {
+      params: Promise.resolve({ id: 'r1' }),
+    })
+    expect(res.status).toBe(500)
+    expect(deleteChain.delete).not.toHaveBeenCalled()
+    consoleError.mockRestore()
+  })
+
+  it('returns 403 for reserved_paid rental_event reservation whose event has not ended', async () => {
+    auth.mockResolvedValue(ADMIN_SESSION)
+    const reservation = {
+      id: 'r1',
+      status: 'reserved_paid',
+      end_date: null,
+      event_id: 'e1',
+      rental_events: { end_date: '2099-12-31' },
+    }
+    const chain = makeChain({
+      single: jest.fn().mockResolvedValue({ data: reservation, error: null }),
+    })
+    supabaseAdmin.from.mockReturnValue(chain)
+    const { DELETE } = await import(
+      '@/app/api/admin/reservations/[id]/route'
+    )
+    const res = await DELETE(makeReq(), {
+      params: Promise.resolve({ id: 'r1' }),
+    })
+    expect(res.status).toBe(403)
+  })
+
   it('allows delete of cancelled reservation', async () => {
     auth.mockResolvedValue(ADMIN_SESSION)
     const reservation = {

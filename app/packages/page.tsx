@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   description: 'Book race committee equipment and management services for your regatta.',
 }
 
+// Package catalog is admin-managed — render per request, never prerender
+export const dynamic = 'force-dynamic'
+
 export default async function PackagesPage() {
   const products = await listPackageProducts()
 

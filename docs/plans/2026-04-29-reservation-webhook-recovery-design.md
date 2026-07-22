@@ -56,7 +56,7 @@ Six paying customers + one likely-internal email had their reservations phantom-
 | rteitge@gmail.com | $350 | 2026-05-15 → 05-24 | Confirmed paid in Stripe |
 | mcrussell1015@gmail.com | $105 | 2026-06-12 → 06-14 | Confirmed paid in Stripe |
 | brantbolling@gmail.com | $105 | 2026-06-12 → 06-14 | Confirmed paid in Stripe |
-| maru.urban.art@gmail.com (×2) | $70, $70 | 2026-05-16 → 05-17 | Unpaid test sessions (per user) |
+| maru.urban.art@gmail.com (×2) | $70, $70 | 2026-05-16 → 05-17 | Confirmed unpaid test sessions (per user) |
 
 ### Secondary observation: Actions column overflow
 

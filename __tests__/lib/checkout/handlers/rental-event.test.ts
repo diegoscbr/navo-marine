@@ -99,10 +99,13 @@ describe('handleRentalEvent', () => {
     // extra_days=2, event_days=3 → 5 days × $35 = $175
     expect(mockStripeCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        shipping_address_collection: { allowed_countries: ['US'] },
         line_items: [expect.objectContaining({ price_data: expect.objectContaining({ unit_amount: 17500 }) })],
       }),
     )
+    // Rentals collect a worldwide address — never US-only (that blocked intl customers)
+    const rentalCountries = mockStripeCreate.mock.calls[0][0].shipping_address_collection.allowed_countries
+    expect(rentalCountries).toEqual(expect.arrayContaining(['US', 'ES', 'AR', 'DE', 'BR']))
+    expect(rentalCountries.length).toBeGreaterThanOrEqual(200)
     expect(insertChain.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         start_date: '2026-04-01',

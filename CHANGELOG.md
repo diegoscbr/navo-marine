@@ -4,12 +4,20 @@ All notable changes to navo-marine are documented here.
 
 ## [Unreleased]
 
+## [1.0.2.0] - 2026-07-22
+
+### Fixed
+- **International customers can now pay for rentals and purchases**: all checkout flows (rental event, rental custom dates, product purchase, admin invoices) now accept a shipping address from any country Stripe supports (237 countries, was US-only). European and South American customers were previously unable to complete payment at all. The address stays on the form so each rental request can be reviewed for shipping viability. Verified against Stripe test mode.
+- **Admin Send Invoice no longer emails an unusable payment link** when the checkout session can't be attached to the reservation — it now reports the failure instead of silently sending a link that couldn't be fulfilled.
+
 ### Added
 - **Event attribution on admin reservations**: rental-event reservations now show the event name + location under the product on `/admin/reservations`, and the Send Invoice action uses `<Product> — <Event>` as the Stripe line-item description so customers can identify the event on their invoice.
 - **Event-date snapshot on reservation insert**: `handleRentalEvent` now writes `start_date` and `end_date` from the parent event onto the reservation row at checkout time, so event rentals (including the zero-dollar direct-success path) carry their own dates instead of relying on the join.
 - **Date fallback on the admin reservations table**: when a reservation row's own dates are null, the table falls back to the joined `rental_events` dates so legacy/zero-dollar registrations no longer render `—`.
 
 ### Tests
+- All checkout flows (rental event, rental custom, purchase, admin invoice): regression tests assert the shipping country list is worldwide (never US-only) and excludes placeholder codes.
+- Admin Send Invoice: covers the purchase (worldwide shipping) and rental_custom branches, and the new update-failure guard.
 - Admin reservations page: renders event name + location for `rental_event` rows and falls back to event dates when reservation dates are null.
 - `handleRentalEvent`: paid path persists `start_date`/`end_date` from the event; zero-dollar path skips Stripe and still records event dates on the reservation.
 

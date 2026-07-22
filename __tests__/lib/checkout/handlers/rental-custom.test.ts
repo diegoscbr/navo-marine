@@ -40,7 +40,7 @@ describe('handleRentalCustom', () => {
     jest.clearAllMocks()
   })
 
-  it('includes shipping_address_collection in Stripe session', async () => {
+  it('includes worldwide shipping_address_collection in Stripe session', async () => {
     mockGetDateWindowProduct.mockResolvedValue({ rental_price_cents: 24500, capacity: 5 })
     mockCheckAvailability.mockResolvedValue({ available: true, reserved: 0, capacity: 5, remaining: 5 })
     mockStripeCreate.mockResolvedValue({ id: 'cs_test_ship', url: 'https://checkout.stripe.com/test' })
@@ -85,10 +85,9 @@ describe('handleRentalCustom', () => {
     )
 
     expect(result.status).toBe(200)
-    expect(mockStripeCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        shipping_address_collection: { allowed_countries: ['US'] },
-      }),
-    )
+    // Rentals collect a worldwide address — never US-only (that blocked intl customers)
+    const rentalCountries = mockStripeCreate.mock.calls[0][0].shipping_address_collection.allowed_countries
+    expect(rentalCountries).toEqual(expect.arrayContaining(['US', 'ES', 'AR', 'DE', 'BR']))
+    expect(rentalCountries.length).toBeGreaterThanOrEqual(200)
   })
 })

@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminSession } from '@/lib/auth-guard'
 import { supabaseAdmin } from '@/lib/db/client'
 import { stripe } from '@/lib/stripe/client'
+import { WORLDWIDE_SHIPPING_COUNTRIES } from '@/lib/stripe/shipping-countries'
 import { sendEmail } from '@/lib/email/gmail'
 import { paymentRequest } from '@/lib/email/templates'
 
+// Purchases ship hardware; rentals collect an address too (owner reviews each
+// rental and decides whether shipping is viable, refunding manually if not).
+// Packages collect no shipping address.
 const SHIPPING_TYPES = new Set(['rental_event', 'rental_custom', 'purchase'])
 
 export async function POST(
@@ -86,7 +90,7 @@ export async function POST(
         },
       ],
       ...(needsShipping
-        ? { shipping_address_collection: { allowed_countries: ['US'] } }
+        ? { shipping_address_collection: { allowed_countries: [...WORLDWIDE_SHIPPING_COUNTRIES] } }
         : {}),
       metadata: {
         reservation_type: res.reservation_type,
@@ -107,14 +111,24 @@ export async function POST(
     )
   }
 
-  // Update reservation with new checkout session and clear expires_at
-  await supabaseAdmin
+  // Update reservation with new checkout session and clear expires_at.
+  // Must succeed BEFORE emailing the link: if this write is lost, the webhook
+  // can't match the session on payment → customer charged, no order recorded.
+  const { error: updateErr } = await supabaseAdmin
     .from('reservations')
     .update({
       stripe_checkout_session_id: stripeSession.id,
       expires_at: null,
     })
     .eq('id', id)
+
+  if (updateErr) {
+    console.error('[send-invoice] reservation update failed:', updateErr)
+    return NextResponse.json(
+      { error: 'Failed to attach checkout session to reservation. Invoice not sent — please retry.' },
+      { status: 500 },
+    )
+  }
 
   // Send payment request email
   const email = paymentRequest({

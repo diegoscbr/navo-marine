@@ -83,14 +83,19 @@ it('creates Stripe session with product price × quantity', async () => {
   expect(productItem.quantity).toBe(2)
 })
 
-it('includes shipping_address_collection for purchase type', async () => {
+it('includes worldwide shipping_address_collection for purchase type', async () => {
   await handlePurchase(
     { product_id: 'atlas-2', quantity: 1, warranty_selected: false },
     session,
     'http://localhost:3000',
   )
   const call = (stripe.checkout.sessions.create as jest.Mock).mock.calls[0][0]
-  expect(call.shipping_address_collection).toEqual({ allowed_countries: ['US'] })
+  const countries = call.shipping_address_collection.allowed_countries
+  // Regression guard: checkout must not be US-only (blocked intl customers).
+  // Assert invariants, not equality with the source constant (tautology).
+  expect(countries).toEqual(expect.arrayContaining(['US', 'ES', 'AR', 'DE', 'BR']))
+  expect(countries).not.toContain('ZZ')
+  expect(countries.length).toBeGreaterThanOrEqual(200)
 })
 
 it('adds warranty line item when warranty_selected is true', async () => {

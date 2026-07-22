@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/db/client'
 import { stripe } from '@/lib/stripe/client'
+import { WORLDWIDE_SHIPPING_COUNTRIES } from '@/lib/stripe/shipping-countries'
 import { getEventProduct, getEventPricing } from '@/lib/db/events'
 import { checkEventAvailability } from '@/lib/db/availability'
 import { daysBetween } from '@/lib/utils/dates'
@@ -116,7 +117,9 @@ export async function handleRentalEvent(
   try {
     stripeSession = await stripe.checkout.sessions.create({
       mode: 'payment',
-      shipping_address_collection: { allowed_countries: ['US'] },
+      // Worldwide, never US-only (a US-only list blocked intl customers from paying).
+      // Owner reviews each rental's address and refunds manually if shipping isn't viable.
+      shipping_address_collection: { allowed_countries: [...WORLDWIDE_SHIPPING_COUNTRIES] },
       line_items: [
         {
           price_data: {

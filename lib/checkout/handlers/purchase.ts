@@ -1,6 +1,7 @@
 import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/db/client'
 import { stripe } from '@/lib/stripe/client'
+import { WORLDWIDE_SHIPPING_COUNTRIES } from '@/lib/stripe/shipping-countries'
 import { storefrontProducts } from '@/lib/commerce/products'
 import { sendEmail } from '@/lib/email/gmail'
 import { bookingPending } from '@/lib/email/templates'
@@ -78,14 +79,14 @@ export async function handlePurchase(
   }
 
   // 6. Create Stripe Checkout session (before any DB write)
-  // SHIPPING RULE: All purchase flows (physical hardware shipped to customer) must include
-  // shipping_address_collection. Rental/package flows do NOT need it.
+  // SHIPPING RULE: Purchase and rental flows collect a shipping address, open to all
+  // countries (never US-only — that blocked intl payments). Package flows do not.
   let stripeSession: { id: string; url: string | null }
   try {
     stripeSession = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: lineItems,
-      shipping_address_collection: { allowed_countries: ['US'] },
+      shipping_address_collection: { allowed_countries: [...WORLDWIDE_SHIPPING_COUNTRIES] },
       metadata: {
         reservation_type: 'purchase',
         product_id: (dbProduct as { id: string }).id,

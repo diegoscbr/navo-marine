@@ -157,9 +157,11 @@ describe('POST /api/admin/reservations/[id]/send-invoice', () => {
     expect(body.success).toBe(true)
     expect(body.checkout_url).toBe('https://checkout.stripe.com/c/pay_test')
 
-    // Verify Stripe session was created with shipping for rental_event
+    // Rentals collect a worldwide address — never US-only (that blocked intl customers)
     const stripeCall = stripe.checkout.sessions.create.mock.calls[0][0]
-    expect(stripeCall.shipping_address_collection).toEqual({ allowed_countries: ['US'] })
+    const rentalCountries = stripeCall.shipping_address_collection.allowed_countries
+    expect(rentalCountries).toEqual(expect.arrayContaining(['US', 'ES', 'AR', 'DE', 'BR']))
+    expect(rentalCountries.length).toBeGreaterThanOrEqual(200)
     expect(stripeCall.customer_email).toBe('c@test.com')
 
     // Verify reservation was updated
@@ -219,6 +221,167 @@ describe('POST /api/admin/reservations/[id]/send-invoice', () => {
     expect(res.status).toBe(200)
     const stripeCall = stripe.checkout.sessions.create.mock.calls[0][0]
     expect(stripeCall.shipping_address_collection).toBeUndefined()
+  })
+
+  it('includes worldwide shipping for rental_custom', async () => {
+    auth.mockResolvedValue(ADMIN_SESSION)
+
+    const reservation = {
+      id: 'r1',
+      status: 'reserved_unpaid',
+      customer_email: 'c@test.com',
+      reservation_type: 'rental_custom',
+      product_id: 'p1',
+      user_id: 'u1',
+      total_cents: 24500,
+      start_date: '2026-08-01',
+      end_date: '2026-08-05',
+    }
+
+    const resChain = makeChain({
+      single: jest.fn().mockResolvedValue({ data: reservation, error: null }),
+    })
+    const productChain = makeChain({
+      single: jest.fn().mockResolvedValue({ data: { name: 'Atlas 2 Rental' }, error: null }),
+    })
+    const updateChain = makeChain({
+      eq: jest.fn().mockResolvedValue({ error: null }),
+    })
+
+    let reservationCallCount = 0
+    supabaseAdmin.from.mockImplementation((table: string) => {
+      if (table === 'reservations') {
+        reservationCallCount++
+        return reservationCallCount === 1 ? resChain : updateChain
+      }
+      if (table === 'products') return productChain
+      return makeChain()
+    })
+
+    stripe.checkout.sessions.create.mockResolvedValue({
+      id: 'cs_test_custom',
+      url: 'https://checkout.stripe.com/c/pay_custom',
+    })
+
+    const { POST } = await import(
+      '@/app/api/admin/reservations/[id]/send-invoice/route'
+    )
+    const res = await POST(makeReq(), {
+      params: Promise.resolve({ id: 'r1' }),
+    })
+
+    expect(res.status).toBe(200)
+    const stripeCall = stripe.checkout.sessions.create.mock.calls[0][0]
+    const countries = stripeCall.shipping_address_collection.allowed_countries
+    expect(countries).toEqual(expect.arrayContaining(['US', 'ES', 'AR', 'DE', 'BR']))
+    expect(countries.length).toBeGreaterThanOrEqual(200)
+  })
+
+  it('includes worldwide shipping for purchase', async () => {
+    auth.mockResolvedValue(ADMIN_SESSION)
+
+    const reservation = {
+      id: 'r1',
+      status: 'reserved_unpaid',
+      customer_email: 'c@test.com',
+      reservation_type: 'purchase',
+      product_id: 'p1',
+      user_id: 'u1',
+      total_cents: 89900,
+      start_date: null,
+      end_date: null,
+    }
+
+    const resChain = makeChain({
+      single: jest.fn().mockResolvedValue({ data: reservation, error: null }),
+    })
+    const productChain = makeChain({
+      single: jest.fn().mockResolvedValue({ data: { name: 'Vakaros Atlas 2' }, error: null }),
+    })
+    const updateChain = makeChain({
+      eq: jest.fn().mockResolvedValue({ error: null }),
+    })
+
+    let reservationCallCount = 0
+    supabaseAdmin.from.mockImplementation((table: string) => {
+      if (table === 'reservations') {
+        reservationCallCount++
+        return reservationCallCount === 1 ? resChain : updateChain
+      }
+      if (table === 'products') return productChain
+      return makeChain()
+    })
+
+    stripe.checkout.sessions.create.mockResolvedValue({
+      id: 'cs_test_purchase',
+      url: 'https://checkout.stripe.com/c/pay_purchase',
+    })
+
+    const { POST } = await import(
+      '@/app/api/admin/reservations/[id]/send-invoice/route'
+    )
+    const res = await POST(makeReq(), {
+      params: Promise.resolve({ id: 'r1' }),
+    })
+
+    expect(res.status).toBe(200)
+    const stripeCall = stripe.checkout.sessions.create.mock.calls[0][0]
+    // Purchases ship hardware — shipping form present, worldwide (never US-only)
+    const countries = stripeCall.shipping_address_collection.allowed_countries
+    expect(countries).toEqual(expect.arrayContaining(['US', 'ES', 'AR', 'DE', 'BR']))
+    expect(countries.length).toBeGreaterThanOrEqual(200)
+  })
+
+  it('returns 500 and does NOT email when the reservation update fails', async () => {
+    auth.mockResolvedValue(ADMIN_SESSION)
+
+    const reservation = {
+      id: 'r1',
+      status: 'reserved_unpaid',
+      customer_email: 'c@test.com',
+      reservation_type: 'rental_event',
+      product_id: 'p1',
+      user_id: 'u1',
+      total_cents: 17500,
+      start_date: '2026-08-01',
+      end_date: '2026-08-05',
+    }
+
+    const resChain = makeChain({
+      single: jest.fn().mockResolvedValue({ data: reservation, error: null }),
+    })
+    const productChain = makeChain({
+      single: jest.fn().mockResolvedValue({ data: { name: 'Atlas 2 Rental' }, error: null }),
+    })
+    // Session-id write fails — the email must NOT go out (link would be unfulfillable)
+    const updateChain = makeChain({
+      eq: jest.fn().mockResolvedValue({ error: { message: 'db down' } }),
+    })
+
+    let reservationCallCount = 0
+    supabaseAdmin.from.mockImplementation((table: string) => {
+      if (table === 'reservations') {
+        reservationCallCount++
+        return reservationCallCount === 1 ? resChain : updateChain
+      }
+      if (table === 'products') return productChain
+      return makeChain()
+    })
+
+    stripe.checkout.sessions.create.mockResolvedValue({
+      id: 'cs_test_failwrite',
+      url: 'https://checkout.stripe.com/c/pay_failwrite',
+    })
+
+    const { POST } = await import(
+      '@/app/api/admin/reservations/[id]/send-invoice/route'
+    )
+    const res = await POST(makeReq(), {
+      params: Promise.resolve({ id: 'r1' }),
+    })
+
+    expect(res.status).toBe(500)
+    expect(sendEmail).not.toHaveBeenCalled()
   })
 
   it('returns 500 when Stripe session creation fails', async () => {

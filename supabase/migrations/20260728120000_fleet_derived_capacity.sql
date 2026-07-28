@@ -124,6 +124,9 @@ COMMENT ON COLUMN date_window_allocations.capacity IS
 DROP TABLE IF EXISTS cart_items;            -- FK child of carts, drop first
 DROP TABLE IF EXISTS carts;
 DROP TABLE IF EXISTS order_items;
-DROP TABLE IF EXISTS product_option_values; -- FK child of product_options
-DROP TABLE IF EXISTS product_options;
 DROP TABLE IF EXISTS product_media;
+
+-- NOTE: product_options and product_option_values were ALSO dropped here
+-- originally. That was wrong — lib/db/products.ts reads and writes them, so it
+-- took the products page down. 20260728143000_restore_product_options.sql puts
+-- them back. They are left out of this list so a replay does not re-break it.

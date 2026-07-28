@@ -2,7 +2,7 @@ import { supabaseAdmin } from '@/lib/db/client'
 import { stripe } from '@/lib/stripe/client'
 import { WORLDWIDE_SHIPPING_COUNTRIES } from '@/lib/stripe/shipping-countries'
 import { getDateWindowProduct } from '@/lib/db/events'
-import { checkWindowAvailability } from '@/lib/db/availability'
+import { getFleetAvailability } from '@/lib/db/fleet'
 import { daysBetween } from '@/lib/utils/dates'
 import { sendEmail } from '@/lib/email/gmail'
 import { bookingPending } from '@/lib/email/templates'
@@ -39,16 +39,8 @@ export async function handleRentalCustom(
     return { status: 404, body: { error: 'Date window product not found' } }
   }
 
-  // 2. Check availability
-  const availability = await checkWindowAvailability(date_window_id, product_id, windowProduct.capacity)
-  if (!availability.available) {
-    return {
-      status: 409,
-      body: { error: 'Sold out — no capacity remaining', availability },
-    }
-  }
-
-  // 3. Fetch product pricing and window dates in parallel
+  // 2. Fetch product pricing and window dates in parallel.
+  // Window dates come first now because they scope the fleet availability check.
   const [productResult, windowResult] = await Promise.all([
     supabaseAdmin
       .from('products')
@@ -65,10 +57,26 @@ export async function handleRentalCustom(
   const product = productResult.data as { base_price_cents: number; price_per_day_cents: number | null } | null
   const window = windowResult.data as { start_date: string; end_date: string } | null
 
+  // The window's dates scope the fleet check, so we cannot proceed without them.
+  if (!window) {
+    return { status: 404, body: { error: 'Date window not found' } }
+  }
+
+  // 3. Check availability against the physical fleet.
+  // windowProduct.capacity is display-only; the serviceable unit count decides,
+  // and overlapping holds from other events or packages are counted too.
+  const availability = await getFleetAvailability(product_id, window.start_date, window.end_date)
+  if (!availability.available) {
+    return {
+      status: 409,
+      body: { error: 'Sold out — no capacity remaining', availability },
+    }
+  }
+
   // 4. Compute total price
   // Use per-day pricing if available; fall back to base_price_cents
   let totalCents: number
-  if (product?.price_per_day_cents != null && window != null) {
+  if (product?.price_per_day_cents != null) {
     const windowDays = daysBetween(window.start_date, window.end_date)
     totalCents = product.price_per_day_cents * (windowDays + extra_days)
   } else {
@@ -151,8 +159,8 @@ export async function handleRentalCustom(
     to: session.user.email ?? '',
     reservationId,
     productName: 'Atlas 2 Rental',
-    startDate: window?.start_date ?? null,
-    endDate: window?.end_date ?? null,
+    startDate: window.start_date,
+    endDate: window.end_date,
     totalCents,
   })
   void sendEmail(pendingEmail.to, pendingEmail.subject, pendingEmail.html)

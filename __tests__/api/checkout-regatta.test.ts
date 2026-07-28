@@ -11,7 +11,7 @@ jest.mock('@/lib/checkout/handlers/regatta-package', () => ({ handleRegattaPacka
 jest.mock('@/lib/db/client', () => ({ supabaseAdmin: { from: jest.fn() } }))
 jest.mock('@/lib/stripe/client', () => ({ stripe: { checkout: { sessions: { create: jest.fn() } } } }))
 jest.mock('@/lib/db/events', () => ({ getEventProduct: jest.fn(), getDateWindowProduct: jest.fn() }))
-jest.mock('@/lib/db/availability', () => ({ checkEventAvailability: jest.fn(), checkWindowAvailability: jest.fn() }))
+jest.mock('@/lib/db/fleet', () => ({ getFleetAvailability: jest.fn(), getFleetSize: jest.fn() }))
 
 import { NextRequest } from 'next/server'
 

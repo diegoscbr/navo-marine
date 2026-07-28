@@ -11,8 +11,8 @@ jest.mock('@/lib/db/events', () => ({
   getEventProduct: jest.fn(),
   getEventPricing: jest.fn(),
 }))
-jest.mock('@/lib/db/availability', () => ({
-  checkEventAvailability: jest.fn(),
+jest.mock('@/lib/db/fleet', () => ({
+  getFleetAvailability: jest.fn(),
 }))
 jest.mock('@/lib/stripe/client', () => ({
   stripe: { checkout: { sessions: { create: jest.fn() } } },
@@ -26,14 +26,14 @@ jest.mock('@/lib/utils/dates', () => ({
 }))
 
 import { getEventProduct, getEventPricing } from '@/lib/db/events'
-import { checkEventAvailability } from '@/lib/db/availability'
+import { getFleetAvailability } from '@/lib/db/fleet'
 import { supabaseAdmin } from '@/lib/db/client'
 import { stripe } from '@/lib/stripe/client'
 import { daysBetween } from '@/lib/utils/dates'
 
 const mockGetEventProduct = getEventProduct as jest.Mock
 const mockGetEventPricing = getEventPricing as jest.Mock
-const mockCheckAvailability = checkEventAvailability as jest.Mock
+const mockCheckAvailability = getFleetAvailability as jest.Mock
 const mockStripeCreate = stripe.checkout.sessions.create as jest.Mock
 
 const mockEventPricing = { start_date: '2026-04-01', end_date: '2026-04-03' }

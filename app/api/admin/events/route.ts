@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminSession } from '@/lib/auth-guard'
 import { supabaseAdmin } from '@/lib/db/client'
+import { getFleetSize } from '@/lib/db/fleet'
 
 export async function GET() {
   if (!(await requireAdminSession())) {
@@ -74,13 +75,20 @@ export async function POST(req: NextRequest) {
   if (productsError) {
     linkWarning = `Failed to query products: ${productsError.message}`
   } else if (products && products.length > 0) {
-    const allocations = products.map((p: { id: string; price_per_day_cents: number | null }) => ({
+    // `capacity` is display-only — availability derives from fleet_availability().
+    // Stamp the live fleet size so admin reads show a real number instead of the
+    // old hardcoded 40, which claimed 40 devices regardless of what was owned.
+    const fleetSizes = await Promise.all(
+      products.map((p: { id: string }) => getFleetSize(p.id)),
+    )
+
+    const allocations = products.map((p: { id: string; price_per_day_cents: number | null }, i: number) => ({
       event_id: data.id,
       product_id: p.id,
       rental_price_cents: (p.price_per_day_cents ?? 0) * eventDays,
       late_fee_cents: 3500,
       reserve_cutoff_days: 14,
-      capacity: 40,
+      capacity: fleetSizes[i],
       inventory_status: 'in_stock',
       rental_price_per_day_cents: p.price_per_day_cents ?? null,
     }))

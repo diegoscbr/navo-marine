@@ -24,9 +24,9 @@ jest.mock('@/lib/db/events', () => ({
   getDateWindowProduct: jest.fn(),
   getEventPricing: jest.fn(),
 }))
-jest.mock('@/lib/db/availability', () => ({
-  checkEventAvailability: jest.fn(),
-  checkWindowAvailability: jest.fn(),
+jest.mock('@/lib/db/fleet', () => ({
+  getFleetAvailability: jest.fn(),
+  getFleetSize: jest.fn(),
 }))
 
 const { auth } = require('@/lib/auth') as { auth: jest.Mock }
@@ -36,11 +36,12 @@ const { supabaseAdmin } = require('@/lib/db/client') as {
 const { stripe } = require('@/lib/stripe/client') as {
   stripe: { checkout: { sessions: { create: jest.Mock } } }
 }
-const { getEventProduct } = require('@/lib/db/events') as {
+const { getEventProduct, getEventPricing } = require('@/lib/db/events') as {
   getEventProduct: jest.Mock
+  getEventPricing: jest.Mock
 }
-const { checkEventAvailability } = require('@/lib/db/availability') as {
-  checkEventAvailability: jest.Mock
+const { getFleetAvailability } = require('@/lib/db/fleet') as {
+  getFleetAvailability: jest.Mock
 }
 
 function makeChain(overrides: Record<string, unknown> = {}) {
@@ -71,13 +72,14 @@ function makeRequest(body: Record<string, unknown>) {
 
 function setupSuccessfulRentalEventMocks() {
   auth.mockResolvedValueOnce(userSession)
+  getEventPricing.mockResolvedValue({ start_date: '2026-04-01', end_date: '2026-04-03' })
   getEventProduct.mockResolvedValueOnce({
     rental_price_cents: 15000,
     late_fee_cents: 3500,
     reserve_cutoff_days: 14,
     capacity: 10,
   })
-  checkEventAvailability.mockResolvedValueOnce({
+  getFleetAvailability.mockResolvedValueOnce({
     available: true,
     reserved: 3,
     capacity: 10,

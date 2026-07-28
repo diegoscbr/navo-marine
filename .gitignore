@@ -62,3 +62,6 @@ TODOS.md
 docs/superpowers/
 docs/context/
 brandGuides/
+
+# Supabase CLI scratch state (version checks, linked project ref)
+supabase/.temp/

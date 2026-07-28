@@ -5,6 +5,9 @@
  * `rental_event_products.capacity` / `date_window_allocations.capacity` column.
  * These tests deliberately set that column absurdly high so a regression that
  * reads it again shows up as a passing checkout that should have been blocked.
+ *
+ * Note the gate is `assigned` units, not hold count — an unassigned hold blocks
+ * nobody. See __tests__/lib/fleet.test.ts for that rule directly.
  */
 import { NextRequest } from 'next/server'
 
@@ -98,8 +101,12 @@ describe('rental_event capacity is fleet-derived', () => {
     getFleetAvailability.mockResolvedValueOnce({
       available: false,
       capacity: 62,
-      reserved: 62,
+      assigned: 62,
+      booked: 62,
       remaining: 0,
+      subscriptionPct: 100,
+      nearCapacity: true,
+      oversubscribed: false,
     })
 
     const { POST } = await import('@/app/api/checkout/route')
@@ -126,8 +133,12 @@ describe('rental_event capacity is fleet-derived', () => {
     getFleetAvailability.mockResolvedValueOnce({
       available: true,
       capacity: 62,
-      reserved: 30,
+      assigned: 30,
+      booked: 31,
       remaining: 32,
+      subscriptionPct: 50,
+      nearCapacity: false,
+      oversubscribed: false,
     })
 
     const { POST } = await import('@/app/api/checkout/route')
@@ -167,8 +178,12 @@ describe('rental_custom capacity is fleet-derived', () => {
     getFleetAvailability.mockResolvedValueOnce({
       available: false,
       capacity: 62,
-      reserved: 62,
+      assigned: 62,
+      booked: 62,
       remaining: 0,
+      subscriptionPct: 100,
+      nearCapacity: true,
+      oversubscribed: false,
     })
 
     const { POST } = await import('@/app/api/checkout/route')

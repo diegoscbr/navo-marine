@@ -6,6 +6,8 @@ import { availableUnitsForReservation } from '@/lib/admin/unit-availability'
 import { DeleteReservationButton } from './DeleteReservationButton'
 import { SendInvoiceButton } from './SendInvoiceButton'
 import { ExportCsvButton } from './ExportCsvButton'
+import { CapacityWarnings } from './CapacityWarnings'
+import { getEventSubscriptions, type EventSubscription } from '@/lib/db/fleet'
 
 export const metadata: Metadata = {
   title: 'Reservations | NAVO Admin',
@@ -118,6 +120,15 @@ export default async function AdminReservationsPage() {
 
   const reservationUnits = (reservationUnitsData ?? []) as ReservationUnit[]
 
+  // Advisory only — bookings running ahead of the fleet. Never gates checkout.
+  // A failure here must not take the whole page down with it.
+  let subscriptions: EventSubscription[] = []
+  try {
+    subscriptions = await getEventSubscriptions()
+  } catch (err) {
+    console.error('[admin/reservations] subscription summary failed:', err)
+  }
+
   function availableUnitsFor(reservationId: string, currentUnitId: string | null) {
     return availableUnitsForReservation(
       unitList,
@@ -175,6 +186,9 @@ export default async function AdminReservationsPage() {
         </div>
         <ExportCsvButton />
       </div>
+
+      {/* Fleet pressure — advisory, never a gate */}
+      <CapacityWarnings subscriptions={subscriptions} />
 
       {/* Status summary */}
       {Object.keys(statusCounts).length > 0 && (

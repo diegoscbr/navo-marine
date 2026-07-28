@@ -21,9 +21,9 @@ jest.mock('@/lib/db/events', () => ({
   getDateWindowProduct: jest.fn(),
   getEventPricing: jest.fn(),
 }))
-jest.mock('@/lib/db/availability', () => ({
-  checkEventAvailability: jest.fn(),
-  checkWindowAvailability: jest.fn(),
+jest.mock('@/lib/db/fleet', () => ({
+  getFleetAvailability: jest.fn(),
+  getFleetSize: jest.fn(),
 }))
 
 const { auth } = require('@/lib/auth') as { auth: jest.Mock }
@@ -38,9 +38,8 @@ const { getEventProduct, getDateWindowProduct, getEventPricing } = require('@/li
   getDateWindowProduct: jest.Mock
   getEventPricing: jest.Mock
 }
-const { checkEventAvailability, checkWindowAvailability } = require('@/lib/db/availability') as {
-  checkEventAvailability: jest.Mock
-  checkWindowAvailability: jest.Mock
+const { getFleetAvailability } = require('@/lib/db/fleet') as {
+  getFleetAvailability: jest.Mock
 }
 
 function makeChain(overrides: Record<string, unknown> = {}) {
@@ -68,7 +67,11 @@ function makeRequest(body: Record<string, unknown>) {
   })
 }
 
-beforeEach(() => jest.clearAllMocks())
+beforeEach(() => {
+  jest.clearAllMocks()
+  // Event/window dates now scope the fleet availability check.
+  getEventPricing.mockResolvedValue({ start_date: '2026-04-01', end_date: '2026-04-03' })
+})
 
 describe('POST /api/checkout', () => {
   it('returns 401 when not authenticated', async () => {
@@ -129,7 +132,7 @@ describe('POST /api/checkout', () => {
       reserve_cutoff_days: 14,
       capacity: 10,
     })
-    checkEventAvailability.mockResolvedValueOnce({
+    getFleetAvailability.mockResolvedValueOnce({
       available: false,
       reserved: 10,
       capacity: 10,
@@ -154,7 +157,7 @@ describe('POST /api/checkout', () => {
       reserve_cutoff_days: 14,
       capacity: 10,
     })
-    checkEventAvailability.mockResolvedValueOnce({
+    getFleetAvailability.mockResolvedValueOnce({
       available: true,
       reserved: 3,
       capacity: 10,
@@ -182,7 +185,7 @@ describe('POST /api/checkout', () => {
       reserve_cutoff_days: 14,
       capacity: 10,
     })
-    checkEventAvailability.mockResolvedValueOnce({
+    getFleetAvailability.mockResolvedValueOnce({
       available: true,
       reserved: 3,
       capacity: 10,
@@ -221,7 +224,7 @@ describe('POST /api/checkout', () => {
       capacity: 5,
       inventory_status: 'in_stock',
     })
-    checkWindowAvailability.mockResolvedValueOnce({
+    getFleetAvailability.mockResolvedValueOnce({
       available: true,
       reserved: 1,
       capacity: 5,

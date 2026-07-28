@@ -12,6 +12,32 @@ DECLARE
   g_functions      uuid;
 BEGIN
 
+-- Product anchor.
+--
+-- Every insert below is a child of this row via product_id, but the row itself was
+-- created by hand in the dashboard and never captured in a migration. Production
+-- works; a fresh replay did not — provisioning a Supabase branch died right here
+-- on the product_box_items foreign key. Seeding it idempotently makes this file
+-- self-sufficient, and changes nothing in production where 003 already ran.
+--
+-- Only columns that exist as of 002 are set. category, price_per_day_cents,
+-- capacity, atlas2_units_required and tablet_required arrive in 005 and are
+-- back-filled for this product by 006, so they are deliberately absent here.
+-- The internal tablet product is likewise inserted by 006, not here.
+INSERT INTO products (
+  id, slug, name, subtitle,
+  base_price_cents, currency, tax_included, active, status,
+  rental_enabled, rental_price_cents, reserve_cutoff_days,
+  requires_event_selection, requires_sail_number
+) VALUES (
+  p_id, 'atlas-2', 'Vakaros Atlas 2',
+  'The most accurate instrument on the water Ever.',
+  124900, 'usd', true, true, 'active',
+  true, 4000, 14,
+  true, true
+)
+ON CONFLICT DO NOTHING;
+
 -- Box items
 INSERT INTO product_box_items (product_id, item_name, sort_order) VALUES
   (p_id, 'Atlas 2',       0),

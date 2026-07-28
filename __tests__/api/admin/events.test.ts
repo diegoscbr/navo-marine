@@ -7,8 +7,10 @@ jest.mock('@/lib/auth', () => ({ auth: jest.fn() }))
 jest.mock('@/lib/db/client', () => ({
   supabaseAdmin: { from: jest.fn() },
 }))
+jest.mock('@/lib/db/fleet', () => ({ getFleetSize: jest.fn() }))
 
 const { auth } = require('@/lib/auth') as { auth: jest.Mock }
+const { getFleetSize } = require('@/lib/db/fleet') as { getFleetSize: jest.Mock }
 const { supabaseAdmin } = require('@/lib/db/client') as { supabaseAdmin: { from: jest.Mock } }
 
 const ADMIN_SESSION = { user: { email: 'admin@navomarine.com', id: 'u1' } }
@@ -31,7 +33,13 @@ function makeChain(overrides: Record<string, unknown> = {}) {
   return chain
 }
 
-beforeEach(() => jest.clearAllMocks())
+beforeEach(() => {
+  jest.clearAllMocks()
+  // Fleet sizes drive the display-only capacity column: 62 Atlas 2, 2 tablets.
+  getFleetSize.mockImplementation((productId: string) =>
+    Promise.resolve(productId === 'p1' ? 62 : 2),
+  )
+})
 
 describe('GET /api/admin/events', () => {
   it('returns 401 for non-admin', async () => {
@@ -153,6 +161,10 @@ describe('POST /api/admin/events', () => {
     expect(fromCalls).toContain('products')
     expect(fromCalls).toContain('rental_event_products')
 
+    // capacity now mirrors the live fleet size per product
+    expect(getFleetSize).toHaveBeenCalledWith('p1')
+    expect(getFleetSize).toHaveBeenCalledWith('p2')
+
     const insertCall = linkChain.insert.mock.calls[0][0]
     expect(insertCall).toHaveLength(2)
 
@@ -162,7 +174,7 @@ describe('POST /api/admin/events', () => {
       rental_price_cents: 17500,
       late_fee_cents: 3500,
       reserve_cutoff_days: 14,
-      capacity: 40,
+      capacity: 62,
       inventory_status: 'in_stock',
       rental_price_per_day_cents: 3500,
     })
@@ -173,7 +185,7 @@ describe('POST /api/admin/events', () => {
       rental_price_cents: 0,
       late_fee_cents: 3500,
       reserve_cutoff_days: 14,
-      capacity: 40,
+      capacity: 2,
       inventory_status: 'in_stock',
       rental_price_per_day_cents: null,
     })

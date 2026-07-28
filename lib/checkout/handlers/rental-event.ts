@@ -2,7 +2,7 @@ import { supabaseAdmin } from '@/lib/db/client'
 import { stripe } from '@/lib/stripe/client'
 import { WORLDWIDE_SHIPPING_COUNTRIES } from '@/lib/stripe/shipping-countries'
 import { getEventProduct, getEventPricing } from '@/lib/db/events'
-import { checkEventAvailability } from '@/lib/db/availability'
+import { getFleetAvailability } from '@/lib/db/fleet'
 import { daysBetween } from '@/lib/utils/dates'
 import { sendEmail } from '@/lib/email/gmail'
 import { bookingPending } from '@/lib/email/templates'
@@ -41,9 +41,17 @@ export async function handleRentalEvent(
   if (!eventProduct) {
     return { status: 404, body: { error: 'Event product not found' } }
   }
+  // The event's dates scope the fleet check, so we cannot proceed without them.
+  if (!event) {
+    return { status: 404, body: { error: 'Event not found' } }
+  }
 
-  // 2. Check availability
-  const availability = await checkEventAvailability(event_id, product_id, eventProduct.capacity)
+  // 2. Check availability against the physical fleet.
+  // Capacity is the number of serviceable units, not eventProduct.capacity — that
+  // column is display-only, so adding or retiring a unit is what moves this number.
+  // Holds from any overlapping event or package count too, so two events running
+  // on the same dates cannot each sell the whole fleet.
+  const availability = await getFleetAvailability(product_id, event.start_date, event.end_date)
   if (!availability.available) {
     return {
       status: 409,
@@ -54,7 +62,7 @@ export async function handleRentalEvent(
   // 3. Compute total price
   // Use per-day pricing from the event-product allocation when present; fall back to the flat fee.
   let totalCents: number
-  if (eventProduct.rental_price_per_day_cents != null && event) {
+  if (eventProduct.rental_price_per_day_cents != null) {
     const eventDays = daysBetween(event.start_date, event.end_date)
     totalCents = eventProduct.rental_price_per_day_cents * (eventDays + extra_days)
   } else {

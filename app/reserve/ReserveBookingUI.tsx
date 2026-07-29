@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import type { RentalEvent, DateWindow } from '@/lib/db/events'
 import { daysBetween } from '@/lib/utils/dates'
@@ -46,6 +47,19 @@ export function ReserveBookingUI({ events, windows, defaultProductId }: Props) {
       if (selection.extra_days !== undefined) setExtraDays(selection.extra_days)
     }
   })
+
+  // Lightweight deep-link pre-select: /reserve?selected_event=<uuid>.
+  // Distinct from the full state-codec rehydrate above — this lets external
+  // links (e.g. the About page) pre-pick an event without supplying sail_number.
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    const preset = searchParams.get('selected_event')
+    if (!preset) return
+    if (selectedEventId) return
+    if (!events.some((e) => e.id === preset)) return
+    setSelectedEventId(preset)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Pre-fill confirmation email from session on first render
   const emailValue = confirmationEmail !== '' ? confirmationEmail : (session?.user?.email ?? '')

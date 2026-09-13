@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 type Reservation = {
   id: string
   customer_email: string
+  customer_name: string | null
   status: string
   reservation_type: string
   start_date: string | null
@@ -81,7 +82,7 @@ function reservationInvoiceName(r: Reservation): string {
 export default async function AdminReservationsPage() {
   const { data: reservations, error } = await supabaseAdmin
     .from('reservations')
-    .select('id, customer_email, status, reservation_type, start_date, end_date, total_cents, created_at, expires_at, unit_id, rental_events(name, location, start_date, end_date), products(name, tablet_required, atlas2_units_required)')
+    .select('id, customer_email, customer_name, status, reservation_type, start_date, end_date, total_cents, created_at, expires_at, unit_id, rental_events(name, location, start_date, end_date), products(name, tablet_required, atlas2_units_required)')
     .order('created_at', { ascending: false })
     .limit(100)
 
@@ -223,7 +224,12 @@ export default async function AdminReservationsPage() {
 
                 return (
                   <tr key={r.id} className="bg-white/[0.02] transition-colors hover:bg-white/5">
-                    <td className="px-5 py-3 text-white/70">{r.customer_email}</td>
+                    <td className="px-5 py-3">
+                      <p className="text-white/80">
+                        {r.customer_name ?? <span className="italic text-white/30">Unknown</span>}
+                      </p>
+                      <p className="mt-0.5 text-xs text-white/40">{r.customer_email}</p>
+                    </td>
                     <td className="px-5 py-3 text-white/60">{r.products?.name ?? '—'}</td>
                     <td className="px-5 py-3">
                       {r.reservation_type === 'rental_event' && r.rental_events?.name ? (

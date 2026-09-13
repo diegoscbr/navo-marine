@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/db/client'
 type ReservationRow = {
   id: string
   customer_email: string
+  customer_name: string | null
   status: string
   reservation_type: string
   start_date: string | null
@@ -21,6 +22,7 @@ type UnitRow = { id: string; navo_number: string }
 type ReservationUnitRow = { reservation_id: string; unit_id: string | null }
 
 const CSV_HEADERS = [
+  'Customer Name',
   'Customer Email',
   'Product',
   'Reservation Type',
@@ -92,6 +94,7 @@ function buildCsv(
     const endDate = r.end_date ?? (isRentalEvent ? r.rental_events?.end_date ?? null : null)
 
     const cells = [
+      r.customer_name ?? '',
       r.customer_email,
       r.products?.name ?? '',
       r.reservation_type,
@@ -125,7 +128,7 @@ export async function GET() {
   const { data: reservationsData, error: reservationsError } = await supabaseAdmin
     .from('reservations')
     .select(
-      'id, customer_email, status, reservation_type, start_date, end_date, total_cents, created_at, unit_id, rental_events(name, location, start_date, end_date), products(name)',
+      'id, customer_email, customer_name, status, reservation_type, start_date, end_date, total_cents, created_at, unit_id, rental_events(name, location, start_date, end_date), products(name)',
     )
     .order('created_at', { ascending: false })
 

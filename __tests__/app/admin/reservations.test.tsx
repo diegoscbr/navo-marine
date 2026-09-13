@@ -155,4 +155,65 @@ describe('/admin/reservations page', () => {
       'Vakaros Atlas 2 — Rolex Miami OCR',
     )
   })
+
+  it('renders customer_name above the email, and an Unknown fallback when it is null', async () => {
+    const reservations = [
+      {
+        id: 'res-3',
+        customer_email: 'named@test.com',
+        customer_name: 'Sarah Whitfield',
+        status: 'reserved_paid',
+        reservation_type: 'rental_event',
+        start_date: null,
+        end_date: null,
+        total_cents: 20000,
+        created_at: '2026-04-10T12:00:00Z',
+        expires_at: null,
+        unit_id: null,
+        rental_events: null,
+        products: { name: 'Vakaros Atlas 2', tablet_required: false, atlas2_units_required: 1 },
+      },
+      {
+        id: 'res-4',
+        customer_email: 'unnamed@test.com',
+        customer_name: null,
+        status: 'reserved_unpaid',
+        reservation_type: 'rental_event',
+        start_date: null,
+        end_date: null,
+        total_cents: 20000,
+        created_at: '2026-04-10T12:00:00Z',
+        expires_at: '2026-04-11T12:00:00Z',
+        unit_id: null,
+        rental_events: null,
+        products: { name: 'Vakaros Atlas 2', tablet_required: false, atlas2_units_required: 1 },
+      },
+    ]
+
+    const reservationsChain = makeChain({
+      limit: jest.fn().mockResolvedValue({ data: reservations, error: null }),
+    })
+    const unitsChain = makeChain({
+      order: jest.fn().mockResolvedValue({ data: [], error: null }),
+    })
+    const reservationUnitsChain = makeChain({
+      in: jest.fn().mockResolvedValue({ data: [] }),
+    })
+
+    supabaseAdmin.from.mockImplementation((table: string) => {
+      if (table === 'reservations') return reservationsChain
+      if (table === 'units') return unitsChain
+      if (table === 'reservation_units') return reservationUnitsChain
+      return makeChain()
+    })
+
+    const ReservationsPage = (await import('@/app/admin/reservations/page')).default
+    const jsx = await ReservationsPage()
+    render(jsx as React.ReactElement)
+
+    expect(screen.getByText('Sarah Whitfield')).toBeInTheDocument()
+    expect(screen.getByText('named@test.com')).toBeInTheDocument()
+    expect(screen.getByText('Unknown')).toBeInTheDocument()
+    expect(screen.getByText('unnamed@test.com')).toBeInTheDocument()
+  })
 })

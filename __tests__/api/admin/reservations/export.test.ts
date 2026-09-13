@@ -49,6 +49,7 @@ describe('GET /api/admin/reservations/export', () => {
           {
             id: 'r1',
             customer_email: 'alice@example.com',
+            customer_name: 'Alice Smith',
             status: 'reserved_paid',
             reservation_type: 'rental_event',
             start_date: null,
@@ -67,6 +68,7 @@ describe('GET /api/admin/reservations/export', () => {
           {
             id: 'r2',
             customer_email: 'bob@example.com',
+            customer_name: null,
             status: 'reserved_unpaid',
             reservation_type: 'regatta_package',
             start_date: '2026-05-01',
@@ -109,16 +111,17 @@ describe('GET /api/admin/reservations/export', () => {
     const lines = withoutBom.split('\r\n')
 
     expect(lines[0]).toBe(
-      'Customer Email,Product,Reservation Type,Event Name,Event Location,Status,Start Date,End Date,Total (USD),Unit,Created At',
+      'Customer Name,Customer Email,Product,Reservation Type,Event Name,Event Location,Status,Start Date,End Date,Total (USD),Unit,Created At',
     )
 
     expect(lines[1]).toBe(
-      'alice@example.com,Atlas 2 Rental,rental_event,Spring Regatta,"Miami, FL",RESERVED PAID,2026-04-10,2026-04-12,125.00,NAVO-001,2026-04-01',
+      'Alice Smith,alice@example.com,Atlas 2 Rental,rental_event,Spring Regatta,"Miami, FL",RESERVED PAID,2026-04-10,2026-04-12,125.00,NAVO-001,2026-04-01',
     )
 
-    // Quotes inside product name must be doubled per RFC 4180.
+    // Quotes inside product name must be doubled per RFC 4180. Empty leading
+    // cell is the null-customer_name case (no name backfilled for this row).
     expect(lines[2]).toBe(
-      'bob@example.com,"Package, Premium ""Plus""",regatta_package,,,RESERVED UNPAID,2026-05-01,2026-05-03,0.00,NAVO-002 + NAVO-003,2026-04-02',
+      ',bob@example.com,"Package, Premium ""Plus""",regatta_package,,,RESERVED UNPAID,2026-05-01,2026-05-03,0.00,NAVO-002 + NAVO-003,2026-04-02',
     )
   })
 
